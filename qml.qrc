@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/">
+        <file>qml/main.qml</file>
+        <file>qml/LibraryView.qml</file>
+        <file>qml/NowPlayingView.qml</file>
+        <file>qml/EqualizerView.qml</file>
+    </qresource>
+</RCC>

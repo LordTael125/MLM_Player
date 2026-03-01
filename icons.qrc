@@ -1,0 +1,19 @@
+<RCC>
+    <qresource prefix="/">
+        <file>qml/icons/play.svg</file>
+        <file>qml/icons/pause.svg</file>
+        <file>qml/icons/stop.svg</file>
+        <file>qml/icons/next.svg</file>
+        <file>qml/icons/prev.svg</file>
+        <file>qml/icons/repeat.svg</file>
+        <file>qml/icons/repeat_one.svg</file>
+        <file>qml/icons/eq.svg</file>
+        <file>qml/icons/menu.svg</file>
+        <file>qml/icons/expand_up.svg</file>
+        <file>qml/icons/expand_down.svg</file>
+        <file>qml/icons/queue.svg</file>
+        <file>qml/icons/close.svg</file>
+        <file>qml/icons/maximize.svg</file>
+        <file>qml/icons/minimize.svg</file>
+    </qresource>
+</RCC>
