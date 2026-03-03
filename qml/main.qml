@@ -512,6 +512,52 @@ ApplicationWindow {
             }
         }
         
+        // Scanning Progress Popup
+        Popup {
+            id: scanningPopup
+            x: Math.round((parent.width - width) / 2)
+            y: Math.round((parent.height - height) / 2)
+            width: 350
+            height: 180
+            modal: true
+            focus: true
+            closePolicy: Popup.NoAutoClose
+            background: Rectangle { color: "#18181c"; radius: 12; border.color: "#33333b"; border.width: 1 }
+
+            ColumnLayout {
+                anchors.centerIn: parent
+                spacing: 20
+
+                BusyIndicator {
+                    Layout.alignment: Qt.AlignHCenter
+                    running: scanningPopup.visible
+                }
+
+                Label {
+                    id: scanningLabel
+                    text: "Scanning Library..."
+                    color: "white"
+                    font.pixelSize: 16
+                    font.bold: true
+                    Layout.alignment: Qt.AlignHCenter
+                }
+            }
+        }
+        
+        Connections {
+            target: libraryScanner
+            function onScanStarted() {
+                scanningPopup.open()
+                scanningLabel.text = "Scanning Library... Please Wait"
+            }
+            function onScanProgress(count) {
+                scanningLabel.text = "Found " + count + " Tracks..."
+            }
+            function onScanFinished(total) {
+                scanningPopup.close()
+            }
+        }
+
         // Queue Drawer
         Drawer {
             id: queueDrawer
@@ -537,6 +583,7 @@ ApplicationWindow {
                     Layout.fillHeight: true
                     clip: true
                     model: window.playbackQueue
+                    cacheBuffer: 1000
                     
                     add: Transition { NumberAnimation { properties: "y"; duration: 250; easing.type: Easing.OutQuad } }
                     displaced: Transition { NumberAnimation { properties: "y"; duration: 250; easing.type: Easing.OutQuad } }
@@ -580,6 +627,8 @@ ApplicationWindow {
                                 Layout.preferredWidth: 40
                                 Layout.preferredHeight: 40
                                 fillMode: Image.PreserveAspectCrop
+                                asynchronous: true
+                                sourceSize: Qt.size(100, 100)
                             }
 
                             ColumnLayout {

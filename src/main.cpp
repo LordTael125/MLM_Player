@@ -8,7 +8,20 @@
 #include "library_scanner.h"
 #include "track_model.h"
 
+// TagLib includes
+#include <taglib/tdebuglistener.h>
+
+class SilentTagLibListener : public TagLib::DebugListener {
+public:
+  void printMessage(const TagLib::String &msg) override {
+    // Suppress TagLib debug and warning messages from polluting the console
+  }
+};
+
 int main(int argc, char *argv[]) {
+  // Silence TagLib
+  static SilentTagLibListener silentListener;
+  TagLib::setDebugListener(&silentListener);
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
   QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 #endif

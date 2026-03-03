@@ -155,6 +155,7 @@ Item {
             cellWidth: 160
             cellHeight: 200
             clip: true
+            cacheBuffer: 1000
             
             delegate: Item {
                 width: 160
@@ -183,6 +184,8 @@ Item {
                             source: model.hasCoverArt ? "image://musiccover/" + model.filePath : ""
                             fillMode: Image.PreserveAspectCrop
                             visible: model.hasCoverArt
+                            asynchronous: true
+                            sourceSize: Qt.size(200, 200)
                         }
 
                         Text {
@@ -238,6 +241,7 @@ Item {
             cellWidth: 180
             cellHeight: 220
             clip: true
+            cacheBuffer: 1000
             delegate: Item {
                 width: 180
                 height: 220
@@ -261,6 +265,8 @@ Item {
                             source: modelData.hasCoverArt ? "image://musiccover/" + modelData.filePath : ""
                             fillMode: Image.PreserveAspectCrop
                             visible: modelData.hasCoverArt
+                            asynchronous: true
+                            sourceSize: Qt.size(200, 200)
                         }
                     }
                     Text {
@@ -307,6 +313,7 @@ Item {
             cellWidth: 180
             cellHeight: 220
             clip: true
+            cacheBuffer: 1000
             delegate: Item {
                 width: 180
                 height: 220
@@ -330,6 +337,8 @@ Item {
                             source: modelData.hasCoverArt ? "image://musiccover/" + modelData.filePath : ""
                             fillMode: Image.PreserveAspectCrop
                             visible: modelData.hasCoverArt
+                            asynchronous: true
+                            sourceSize: Qt.size(200, 200)
                         }
                     }
                     Text {
@@ -365,6 +374,7 @@ Item {
             cellWidth: 180
             cellHeight: 220
             clip: true
+            cacheBuffer: 1000
             delegate: Item {
                 width: 180
                 height: 220
@@ -388,6 +398,8 @@ Item {
                             source: modelData.hasCoverArt ? "image://musiccover/" + modelData.filePath : ""
                             fillMode: Image.PreserveAspectCrop
                             visible: modelData.hasCoverArt
+                            asynchronous: true
+                            sourceSize: Qt.size(200, 200)
                         }
                     }
                     Text {
@@ -434,6 +446,7 @@ Item {
             cellWidth: 180
             cellHeight: 220
             clip: true
+            cacheBuffer: 1000
             delegate: Item {
                 width: 180
                 height: 220
@@ -457,6 +470,8 @@ Item {
                             source: modelData.hasCoverArt ? "image://musiccover/" + modelData.filePath : ""
                             fillMode: Image.PreserveAspectCrop
                             visible: modelData.hasCoverArt
+                            asynchronous: true
+                            sourceSize: Qt.size(200, 200)
                         }
                     }
                     Text {

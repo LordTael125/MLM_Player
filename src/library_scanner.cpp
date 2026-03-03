@@ -10,6 +10,7 @@
 #include <QStandardPaths>
 #include <QTimer>
 #include <QVariant>
+#include <QtConcurrent>
 
 // TagLib includes
 #include <QUrl>
@@ -106,117 +107,133 @@ void LibraryScanner::scanDirectory(const QString &directoryPath) {
     path = QUrl(path).toLocalFile();
   }
 
-  QDirIterator it(path,
-                  QStringList() << "*.mp3" << "*.flac" << "*.wav" << "*.m4a"
-                                << "*.aac" << "*.ogg",
-                  QDir::Files, QDirIterator::Subdirectories);
+  QtConcurrent::run([this, path]() {
+    QDirIterator it(path,
+                    QStringList() << "*.mp3" << "*.flac" << "*.wav" << "*.m4a"
+                                  << "*.aac" << "*.ogg",
+                    QDir::Files, QDirIterator::Subdirectories);
 
-  int filesProcessed = 0;
-  QVector<Track> newTracks;
+    int filesProcessed = 0;
+    QVector<Track> newTracks;
 
-  while (it.hasNext()) {
-    QString filePath = it.next();
+    while (it.hasNext()) {
+      QString filePath = it.next();
 
-    Track track;
-    track.filePath = filePath;
+      Track track;
+      track.filePath = filePath;
 
-    TagLib::FileRef f(filePath.toUtf8().constData());
-    if (!f.isNull() && f.tag()) {
-      TagLib::Tag *tag = f.tag();
+      TagLib::FileRef f(filePath.toUtf8().constData());
+      if (!f.isNull() && f.tag()) {
+        TagLib::Tag *tag = f.tag();
 
-      track.title = QString::fromStdWString(tag->title().toWString());
-      track.artist = QString::fromStdWString(tag->artist().toWString());
-      track.album = QString::fromStdWString(tag->album().toWString());
-      track.genre = QString::fromStdWString(tag->genre().toWString());
+        track.title = QString::fromStdWString(tag->title().toWString());
+        track.artist = QString::fromStdWString(tag->artist().toWString());
+        track.album = QString::fromStdWString(tag->album().toWString());
+        track.genre = QString::fromStdWString(tag->genre().toWString());
 
-      if (track.title.isEmpty()) {
-        track.title = QFileInfo(filePath).completeBaseName();
-      }
-      if (track.artist.isEmpty()) {
-        track.artist = "Unknown Artist";
-      }
+        if (track.title.isEmpty()) {
+          track.title = QFileInfo(filePath).completeBaseName();
+        }
+        if (track.artist.isEmpty()) {
+          track.artist = "Unknown Artist";
+        }
 
-      TagLib::PropertyMap properties = f.file()->properties();
-      if (properties.contains("TRACKNUMBER") &&
-          !properties["TRACKNUMBER"].isEmpty()) {
-        track.trackNumber = properties["TRACKNUMBER"].front().toInt();
-      } else {
-        track.trackNumber = tag->track();
-      }
+        TagLib::PropertyMap properties = f.file()->properties();
+        if (properties.contains("TRACKNUMBER") &&
+            !properties["TRACKNUMBER"].isEmpty()) {
+          track.trackNumber = properties["TRACKNUMBER"].front().toInt();
+        } else {
+          track.trackNumber = tag->track();
+        }
 
-      if (properties.contains("DISCNUMBER") &&
-          !properties["DISCNUMBER"].isEmpty()) {
-        track.discNumber = properties["DISCNUMBER"].front().toInt();
-      }
+        if (properties.contains("DISCNUMBER") &&
+            !properties["DISCNUMBER"].isEmpty()) {
+          track.discNumber = properties["DISCNUMBER"].front().toInt();
+        }
 
-      if (f.audioProperties()) {
-        track.duration = f.audioProperties()->lengthInSeconds();
-      }
+        if (f.audioProperties()) {
+          track.duration = f.audioProperties()->lengthInSeconds();
+        }
 
-      // Check for cover art
-      bool hasArt = false;
-      if (filePath.endsWith(".mp3", Qt::CaseInsensitive)) {
-        TagLib::MPEG::File mpegFile(filePath.toUtf8().constData());
-        if (mpegFile.hasID3v2Tag()) {
-          TagLib::ID3v2::Tag *id3v2tag = mpegFile.ID3v2Tag();
-          if (id3v2tag) {
-            auto frameList = id3v2tag->frameListMap()["APIC"];
-            if (!frameList.isEmpty()) {
+        // Check for cover art
+        bool hasArt = false;
+        if (filePath.endsWith(".mp3", Qt::CaseInsensitive)) {
+          TagLib::MPEG::File mpegFile(filePath.toUtf8().constData());
+          if (mpegFile.hasID3v2Tag()) {
+            TagLib::ID3v2::Tag *id3v2tag = mpegFile.ID3v2Tag();
+            if (id3v2tag) {
+              auto frameList = id3v2tag->frameListMap()["APIC"];
+              if (!frameList.isEmpty()) {
+                hasArt = true;
+              }
+            }
+          }
+        } else if (filePath.endsWith(".flac", Qt::CaseInsensitive)) {
+          TagLib::FLAC::File flacFile(filePath.toUtf8().constData());
+          if (flacFile.isValid() && !flacFile.pictureList().isEmpty()) {
+            hasArt = true;
+          }
+        } else if (filePath.endsWith(".m4a", Qt::CaseInsensitive)) {
+          TagLib::MP4::File mp4File(filePath.toUtf8().constData());
+          if (mp4File.isValid() && mp4File.tag()) {
+            auto itemList = mp4File.tag()->itemMap();
+            if (itemList.contains("covr")) {
               hasArt = true;
             }
           }
         }
-      } else if (filePath.endsWith(".flac", Qt::CaseInsensitive)) {
-        TagLib::FLAC::File flacFile(filePath.toUtf8().constData());
-        if (flacFile.isValid() && !flacFile.pictureList().isEmpty()) {
-          hasArt = true;
-        }
-      } else if (filePath.endsWith(".m4a", Qt::CaseInsensitive)) {
-        TagLib::MP4::File mp4File(filePath.toUtf8().constData());
-        if (mp4File.isValid() && mp4File.tag()) {
-          auto itemList = mp4File.tag()->itemMap();
-          if (itemList.contains("covr")) {
-            hasArt = true;
-          }
-        }
+
+        track.hasCoverArt = hasArt;
+      } else {
+        // Fallback for tags extraction failure
+        track.title = QFileInfo(filePath).completeBaseName();
+        track.artist = "Unknown Artist";
       }
 
-      track.hasCoverArt = hasArt;
-    } else {
-      // Fallback for tags extraction failure
-      track.title = QFileInfo(filePath).completeBaseName();
-      track.artist = "Unknown Artist";
+      newTracks.append(track);
+      filesProcessed++;
+
+      if (filesProcessed % 10 == 0) {
+        emit scanProgress(filesProcessed);
+      }
     }
 
-    newTracks.append(track);
-    filesProcessed++;
+    QString dataDir =
+        QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    {
+      QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE", "scanner_conn");
+      db.setDatabaseName(dataDir + "/tracks.db");
+      if (db.open()) {
+        db.transaction();
+        QSqlQuery insertQuery(db);
+        insertQuery.prepare(
+            "INSERT OR REPLACE INTO tracks (title, artist, album, "
+            "genre, duration, filePath, hasCoverArt, trackNumber, discNumber) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
-    if (filesProcessed % 10 == 0) {
-      emit scanProgress(filesProcessed);
+        for (const Track &t : newTracks) {
+          insertQuery.bindValue(0, t.title);
+          insertQuery.bindValue(1, t.artist);
+          insertQuery.bindValue(2, t.album);
+          insertQuery.bindValue(3, t.genre);
+          insertQuery.bindValue(4, t.duration);
+          insertQuery.bindValue(5, t.filePath);
+          insertQuery.bindValue(6, t.hasCoverArt ? 1 : 0);
+          insertQuery.bindValue(7, t.trackNumber);
+          insertQuery.bindValue(8, t.discNumber);
+          insertQuery.exec();
+        }
+        db.commit();
+      }
     }
-  }
+    QSqlDatabase::removeDatabase("scanner_conn");
 
-  QSqlDatabase::database().transaction();
-  QSqlQuery insertQuery;
-  insertQuery.prepare(
-      "INSERT OR REPLACE INTO tracks (title, artist, album, "
-      "genre, duration, filePath, hasCoverArt, trackNumber, discNumber) "
-      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-
-  for (const Track &t : newTracks) {
-    insertQuery.bindValue(0, t.title);
-    insertQuery.bindValue(1, t.artist);
-    insertQuery.bindValue(2, t.album);
-    insertQuery.bindValue(3, t.genre);
-    insertQuery.bindValue(4, t.duration);
-    insertQuery.bindValue(5, t.filePath);
-    insertQuery.bindValue(6, t.hasCoverArt ? 1 : 0);
-    insertQuery.bindValue(7, t.trackNumber);
-    insertQuery.bindValue(8, t.discNumber);
-    insertQuery.exec();
-  }
-  QSqlDatabase::database().commit();
-
-  loadDatabase();
-  emit scanFinished(filesProcessed);
+    QMetaObject::invokeMethod(
+        this,
+        [this, filesProcessed]() {
+          loadDatabase();
+          emit scanFinished(filesProcessed);
+        },
+        Qt::QueuedConnection);
+  });
 }

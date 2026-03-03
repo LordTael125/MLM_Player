@@ -11,7 +11,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 # Find Qt
-find_package(Qt5 COMPONENTS Core Gui Widgets Qml Quick Sql REQUIRED)
+find_package(Qt5 COMPONENTS Core Gui Widgets Qml Quick Sql Concurrent REQUIRED)
 
 # Find TagLib
 find_package(PkgConfig REQUIRED)
@@ -51,7 +51,7 @@ add_executable(MusicPlayer
 
 # Link Libraries
 target_link_libraries(MusicPlayer PRIVATE
-    Qt5::Core Qt5::Gui Qt5::Widgets Qt5::Qml Qt5::Quick Qt5::Sql
+    Qt5::Core Qt5::Gui Qt5::Widgets Qt5::Qml Qt5::Quick Qt5::Sql Qt5::Concurrent
     ${TAGLIB_LIBRARIES}
     dl pthread m
 )

@@ -62,6 +62,8 @@ Item {
                 source: window.currentPlayingPath !== "" ? "image://musiccover/" + window.currentPlayingPath : ""
                 fillMode: Image.PreserveAspectCrop
                 visible: window.currentPlayingPath !== ""
+                asynchronous: true
+                sourceSize: Qt.size(600, 600)
             }
 
             Text {
