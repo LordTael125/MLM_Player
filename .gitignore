@@ -1,3 +1,5 @@
 .cache
 build
 Progress
+.qtcreator
+.vscode

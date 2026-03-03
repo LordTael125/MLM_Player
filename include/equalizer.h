@@ -17,6 +17,12 @@ public:
   Q_INVOKABLE float bandGain(int index) const; // In dB
   Q_INVOKABLE float bandFrequency(int index) const;
 
+  Q_INVOKABLE QStringList getPresetNames() const;
+  Q_INVOKABLE bool isCustomPreset(const QString &name) const;
+  Q_INVOKABLE void saveCustomPreset(const QString &name);
+  Q_INVOKABLE void loadPreset(const QString &name);
+  Q_INVOKABLE void deleteCustomPreset(const QString &name);
+
 public slots:
   void setEnabled(bool enabled);
   void setBandGain(int index, float gainDb);

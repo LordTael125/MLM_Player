@@ -17,7 +17,20 @@ Item {
     ToolButton {
         anchors.top: parent.top
         anchors.left: parent.left
-        anchors.margins: 15
+        anchors.margins: 25
+        icon.source: "qrc:/qml/icons/drop_down.svg"
+        icon.color: "white"
+        icon.width: 32
+        icon.height: 32
+        onClicked: nowPlayingPopup.close()
+        display: AbstractButton.IconOnly
+        z: 10
+    }
+
+    ToolButton {
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.margins: 25
         icon.source: "qrc:/qml/icons/eq.svg"
         icon.color: "white"
         icon.width: 24
@@ -174,6 +187,33 @@ Item {
             }
 
             Item { Layout.fillHeight: true } // spacer
+        }
+    }
+
+    RowLayout {
+        anchors.bottom: parent.bottom
+        anchors.right: parent.right
+        anchors.margins: 35
+        spacing: 20
+        z: 10
+
+        ToolButton {
+            id: volumeButton
+            icon.source: audioEngine.volume === 0.0 ? "qrc:/qml/icons/volume_off.svg" : "qrc:/qml/icons/volume.svg"
+            icon.color: "white"
+            display: AbstractButton.IconOnly
+            width: 48
+            height: 48
+            onClicked: window.showVolumePopup(this)
+        }
+
+        ToolButton {
+            icon.source: "qrc:/qml/icons/queue.svg"
+            icon.color: "white"
+            display: AbstractButton.IconOnly
+            width: 48
+            height: 48
+            onClicked: queueDrawer.open()
         }
     }
 }

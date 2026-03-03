@@ -54,6 +54,7 @@ private:
   ma_sound m_sound;
   bool m_isInitialized{false};
   bool m_soundLoaded{false};
+  float m_volume{1.0f};
 
   Equalizer *m_equalizer{nullptr};
   ma_peak_node m_eqNodes[10];

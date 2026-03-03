@@ -15,5 +15,11 @@
         <file>qml/icons/close.svg</file>
         <file>qml/icons/maximize.svg</file>
         <file>qml/icons/minimize.svg</file>
+        <file>qml/icons/back.svg</file>
+        <file>qml/icons/panel_close.svg</file>
+        <file>qml/icons/panel_open.svg</file>
+        <file>qml/icons/volume.svg</file>
+        <file>qml/icons/drop_down.svg</file>
+        <file>qml/icons/volume_off.svg</file>
     </qresource>
 </RCC>

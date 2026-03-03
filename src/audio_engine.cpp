@@ -101,6 +101,7 @@ void AudioEngine::loadFile(const QString &filePath) {
   ma_node_attach_output_bus(&m_sound, 0, &m_eqNodes[0], 0);
 
   m_soundLoaded = true;
+  ma_sound_set_volume(&m_sound, m_volume);
 
   // Get duration
   float len = 0.0f;
@@ -137,18 +138,28 @@ void AudioEngine::setPosition(float pos) {
   if (!m_soundLoaded)
     return;
 
-  ma_uint32 sampleRate = ma_engine_get_sample_rate(&m_engine);
+  if (pos < 0.0f) {
+    pos = 0.0f;
+  }
 
+  float len = duration();
+  if (len > 0.0f && pos >= len) {
+    emit playbackFinished();
+    return;
+  }
+
+  ma_uint32 sampleRate = ma_engine_get_sample_rate(&m_engine);
   ma_uint64 targetFrame = static_cast<ma_uint64>(pos * sampleRate);
   ma_sound_seek_to_pcm_frame(&m_sound, targetFrame);
   emit positionChanged(pos);
 }
 
 void AudioEngine::setVolume(float vol) {
-  if (!m_soundLoaded)
-    return;
-  ma_sound_set_volume(&m_sound, vol);
-  emit volumeChanged(vol);
+  m_volume = vol;
+  if (m_soundLoaded) {
+    ma_sound_set_volume(&m_sound, vol);
+  }
+  emit volumeChanged(m_volume);
 }
 
 bool AudioEngine::isPlaying() const {
@@ -173,8 +184,4 @@ float AudioEngine::duration() const {
   return len;
 }
 
-float AudioEngine::volume() const {
-  if (!m_soundLoaded)
-    return 1.0f;
-  return ma_sound_get_volume(&m_sound);
-}
+float AudioEngine::volume() const { return m_volume; }

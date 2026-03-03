@@ -3,7 +3,7 @@ import QtQuick.Controls 2.15
 import QtQuick.Controls.Material 2.15
 import QtQuick.Window 2.15
 import QtQuick.Layouts 1.15
-import Qt.labs.platform 1.1
+import Qt.labs.platform 1.1 as Platform
 
 ApplicationWindow {
     id: window
@@ -22,14 +22,30 @@ ApplicationWindow {
     property string currentPlayingTitle: "No Song Playing"
     property string currentPlayingArtist: ""
     property string currentPlayingPath: ""
-    property int currentPlayingIndex: -1
+    property var playbackQueue: []
+    property int currentQueueIndex: -1
     property bool repeatMode: false
 
-    function playTrackAtIndex(idx) {
-        if (idx < 0 || idx >= trackModel.rowCount()) return;
-        currentPlayingIndex = idx;
+    function playTrackAtIndex(idx, contextCategory) {
+        if (idx < 0) return;
         
-        var track = trackModel.get(idx);
+        // If an external category is passed, repopulate the queue
+        if (contextCategory) {
+            let newQueue = [];
+            // Push everything from current visible model into the queue so users can skip forward
+            for(var i = 0; i < trackModel.rowCount(); i++) {
+                newQueue.push(trackModel.get(i));
+            }
+            playbackQueue = newQueue;
+            currentQueueIndex = idx;
+        } else {
+            // Internal call (Next/Prev from Queue)
+            currentQueueIndex = idx;
+        }
+        
+        if (currentQueueIndex < 0 || currentQueueIndex >= playbackQueue.length) return;
+        
+        var track = playbackQueue[currentQueueIndex];
         if (!track) return;
         
         currentPlayingTitle = track.title;
@@ -39,6 +55,13 @@ ApplicationWindow {
         audioEngine.loadFile(track.filePath);
         audioEngine.play();
     }
+    
+    function showVolumePopup(callerItem) {
+        var pos = callerItem.mapToItem(window.contentItem, 0, 0);
+        volumePopup.x = Math.max(0, Math.round(pos.x + callerItem.width / 2 - volumePopup.width / 2));
+        volumePopup.y = Math.max(0, Math.round(pos.y - volumePopup.height - 25)); // Added negative offset to hover
+        volumePopup.open();
+    }
 
     Connections {
         target: audioEngine
@@ -47,14 +70,14 @@ ApplicationWindow {
                 audioEngine.setPosition(0);
                 audioEngine.play();
             } else {
-                if (currentPlayingIndex >= 0 && currentPlayingIndex < trackModel.rowCount() - 1) {
-                    playTrackAtIndex(currentPlayingIndex + 1);
+                if (currentQueueIndex >= 0 && currentQueueIndex < playbackQueue.length - 1) {
+                    playTrackAtIndex(currentQueueIndex + 1);
                 }
             }
         }
     }
 
-    FolderDialog {
+    Platform.FolderDialog {
         id: folderDialog
         title: "Please choose a folder with Music"
         onAccepted: {
@@ -62,26 +85,43 @@ ApplicationWindow {
         }
     }
 
-    // Header removed per blueprint. Menu button is now floating.
+    // --- Global Keyboard Shortcuts ---
+    property real previousVolume: 1.0
 
-    Menu {
-        id: menuPopup
-        MenuItem {
-            text: "Scan Directory"
-            onTriggered: folderDialog.open()
+    Shortcut { sequence: "Ctrl+Left"; context: Qt.ApplicationShortcut; onActivated: playTrackAtIndex(currentQueueIndex - 1) }
+    Shortcut { sequence: "Ctrl+Right"; context: Qt.ApplicationShortcut; onActivated: playTrackAtIndex(currentQueueIndex + 1) }
+    Shortcut {
+        sequence: "Space"
+        context: Qt.ApplicationShortcut
+        onActivated: {
+            if (audioEngine.isPlaying) audioEngine.pause()
+            else audioEngine.play()
         }
-        MenuItem {
-            text: "Clear Database"
-            onTriggered: {
-                libraryScanner.clearDatabase()
-                window.currentPlayingIndex = -1
-                window.currentPlayingTitle = "No Song Playing"
-                window.currentPlayingArtist = ""
-                window.currentPlayingPath = ""
-                audioEngine.stop()
+    }
+    Shortcut {
+        sequence: "Ctrl+M"
+        context: Qt.ApplicationShortcut
+        onActivated: {
+            if (audioEngine.volume > 0.01) {
+                previousVolume = audioEngine.volume
+                audioEngine.volume = 0.0
+            } else {
+                audioEngine.volume = previousVolume > 0.01 ? previousVolume : 1.0
             }
         }
     }
+    Shortcut { sequence: "Left"; context: Qt.ApplicationShortcut; onActivated: audioEngine.setPosition(audioEngine.position - 10.0) }
+    Shortcut { sequence: "Right"; context: Qt.ApplicationShortcut; onActivated: audioEngine.setPosition(audioEngine.position + 10.0) }
+    Shortcut { sequence: "Up"; context: Qt.ApplicationShortcut; onActivated: audioEngine.volume = Math.min(1.0, audioEngine.volume + 0.1) }
+    Shortcut { sequence: "Down"; context: Qt.ApplicationShortcut; onActivated: audioEngine.volume = Math.max(0.0, audioEngine.volume - 0.1) }
+    Shortcut { sequence: "Ctrl+P"; context: Qt.ApplicationShortcut; onActivated: queueDrawer.visible = !queueDrawer.visible }
+    Shortcut { sequence: "F"; context: Qt.ApplicationShortcut; onActivated: libraryView.isSidebarVisible = !libraryView.isSidebarVisible }
+    Shortcut { sequence: "Ctrl+Q"; context: Qt.ApplicationShortcut; onActivated: Qt.quit() }
+    // Esc is naturally handled by Qt Popups to close them, so no explicit mapping needed here.
+
+    // Header removed per blueprint. Menu button is now floating.
+
+
 
     ColumnLayout {
         anchors.fill: parent
@@ -158,6 +198,7 @@ ApplicationWindow {
             }
         
         ToolButton {
+            id: menuButton
             anchors.top: parent.top
             anchors.right: parent.right
             anchors.margins: 15
@@ -165,8 +206,69 @@ ApplicationWindow {
             icon.color: "white"
             icon.width: 24
             icon.height: 24
-            onClicked: menuPopup.open()
             display: AbstractButton.IconOnly
+            onClicked: mainMenuPopup.open()
+        }
+
+        Popup {
+            id: mainMenuPopup
+            x: window.width - width - 15
+            y: 45
+            width: 220
+            padding: 5
+            background: Rectangle { color: "#18181c"; border.color: "#33333b"; radius: 8 }
+            closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+            
+            ColumnLayout {
+                anchors.fill: parent
+                spacing: 2
+                
+                Button {
+                    Layout.fillWidth: true
+                    text: "Scan Directory"
+                    contentItem: Text { text: parent.text; color: "white"; font.pixelSize: 15; verticalAlignment: Text.AlignVCenter; leftPadding: 15; topPadding: 8; bottomPadding: 8 }
+                    background: Rectangle { color: parent.hovered ? "#2a2a35" : "transparent"; radius: 4 }
+                    onClicked: { mainMenuPopup.close(); folderDialog.open() }
+                }
+                Button {
+                    Layout.fillWidth: true
+                    text: "Clear Database"
+                    contentItem: Text { text: parent.text; color: "white"; font.pixelSize: 15; verticalAlignment: Text.AlignVCenter; leftPadding: 15; topPadding: 8; bottomPadding: 8 }
+                    background: Rectangle { color: parent.hovered ? "#2a2a35" : "transparent"; radius: 4 }
+                    onClicked: {
+                        mainMenuPopup.close()
+                        libraryScanner.clearDatabase()
+                        window.playbackQueue = []
+                        window.currentQueueIndex = -1
+                        window.currentPlayingTitle = "No Song Playing"
+                        window.currentPlayingArtist = ""
+                        window.currentPlayingPath = ""
+                        audioEngine.stop()
+                    }
+                }
+                Rectangle { Layout.fillWidth: true; height: 1; color: "#33333b" }
+                Button {
+                    Layout.fillWidth: true
+                    text: "Keyboard Shortcuts"
+                    contentItem: Text { text: parent.text; color: "#0078d7"; font.bold: true; font.pixelSize: 15; verticalAlignment: Text.AlignVCenter; leftPadding: 15; topPadding: 8; bottomPadding: 8 }
+                    background: Rectangle { color: parent.hovered ? "#2a2a35" : "transparent"; radius: 4 }
+                    onClicked: { mainMenuPopup.close(); shortcutsPopup.open() }
+                }
+                Button {
+                    Layout.fillWidth: true
+                    text: "About Music Player"
+                    contentItem: Text { text: parent.text; color: "white"; font.pixelSize: 15; verticalAlignment: Text.AlignVCenter; leftPadding: 15; topPadding: 8; bottomPadding: 8 }
+                    background: Rectangle { color: parent.hovered ? "#2a2a35" : "transparent"; radius: 4 }
+                    onClicked: { mainMenuPopup.close(); supportPopup.open() }
+                }
+                Button {
+                    Layout.fillWidth: true
+                    text: "Support"
+                    contentItem: Text { text: parent.text; color: "white"; font.pixelSize: 15; verticalAlignment: Text.AlignVCenter; leftPadding: 15; topPadding: 8; bottomPadding: 8 }
+                    background: Rectangle { color: parent.hovered ? "#2a2a35" : "transparent"; radius: 4 }
+                    onClicked: { mainMenuPopup.close(); supportPopup.open() }
+                }
+            }
         }
         
         // Equalizer Popup
@@ -191,6 +293,31 @@ ApplicationWindow {
                 anchors.fill: parent
             }
         }
+
+        // Volume Popup
+        Popup {
+            id: volumePopup
+            width: 60
+            height: 200
+            padding: 10
+            background: Rectangle { 
+                color: "#18181c" 
+                radius: 12
+                border.color: "#33333b"
+                border.width: 1
+            }
+            closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+            
+            Slider {
+                anchors.centerIn: parent
+                height: 160
+                orientation: Qt.Vertical
+                from: 0.0
+                to: 1.0
+                value: audioEngine.volume
+                onMoved: audioEngine.volume = value
+            }
+        }
         
         // Now Playing Popup Overlay
         Popup {
@@ -207,6 +334,181 @@ ApplicationWindow {
             
             NowPlayingView {
                 anchors.fill: parent
+            }
+        }
+        
+        // Keyboard Shortcuts Popup
+        Popup {
+            id: shortcutsPopup
+            x: Math.round((parent.width - width) / 2)
+            y: Math.round((parent.height - height) / 2)
+            width: 750
+            height: 380
+            modal: true
+            focus: true
+            background: Rectangle { color: "#18181c"; radius: 12; border.color: "#33333b"; border.width: 1 }
+            closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+            
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 25
+                spacing: 12
+                
+                Label {
+                    text: "Keyboard Shortcuts"
+                    font.bold: true
+                    font.pixelSize: 20
+                    color: "white"
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.bottomMargin: 10
+                }
+                
+                Rectangle { Layout.fillWidth: true; height: 1; color: "#33333b" }
+                
+                GridLayout {
+                    Layout.fillWidth: true
+                    columns: 2
+                    columnSpacing: 30
+                    rowSpacing: 15
+                    
+                    Repeater {
+                        model: [
+                            { k: "Space", d: "Play / Pause" },
+                            { k: "Ctrl + Left", d: "Play Previous Track" },
+                            { k: "Ctrl + Right", d: "Play Next Track" },
+                            { k: "Left / Right", d: "Seek +/- 10 Seconds" },
+                            { k: "Up / Down", d: "Volume +/- 10%" },
+                            { k: "Ctrl + M", d: "Mute / Unmute" },
+                            { k: "Ctrl + P", d: "Toggle Queue Panel" },
+                            { k: "F", d: "Toggle Library Filters" },
+                            { k: "Esc", d: "Close Menus / Popups" },
+                            { k: "Ctrl + Q", d: "Quit Player" }
+                        ]
+                        
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 36
+                            color: "transparent"
+                            radius: 4
+                            
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: 10
+                                anchors.rightMargin: 10
+                                
+                                Rectangle {
+                                    Layout.preferredWidth: 110
+                                    Layout.preferredHeight: 24
+                                    color: "#22222b"
+                                    radius: 4
+                                    border.color: "#33333b"
+                                    
+                                    Label { 
+                                        anchors.centerIn: parent
+                                        text: modelData.k
+                                        color: "#0078d7"
+                                        font.bold: true
+                                        font.pixelSize: 13
+                                    }
+                                }
+                                
+                                Item { Layout.preferredWidth: 10 } // Spacer
+                                
+                                Label { 
+                                    text: modelData.d
+                                    color: "#e0e0e0"
+                                    font.pixelSize: 14
+                                    Layout.fillWidth: true 
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                Item { Layout.fillHeight: true }
+                
+                Button {
+                    text: "Got It"
+                    Layout.alignment: Qt.AlignHCenter
+                    background: Rectangle { color: "#0078d7"; radius: 6; implicitWidth: 100; implicitHeight: 35 }
+                    contentItem: Text { text: parent.text; color: "white"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.bold: true }
+                    onClicked: shortcutsPopup.close()
+                }
+            }
+        }
+        
+        // Support / About Popup
+        Popup {
+            id: supportPopup
+            x: Math.round((parent.width - width) / 2)
+            y: Math.round((parent.height - height) / 2)
+            width: 380
+            height: 320
+            modal: true
+            focus: true
+            background: Rectangle { color: "#18181c"; radius: 12; border.color: "#33333b"; border.width: 1 }
+            closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+            
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 25
+                spacing: 15
+                
+                Label {
+                    text: "Modern Music Player"
+                    font.bold: true
+                    font.pixelSize: 22
+                    color: "white"
+                    Layout.alignment: Qt.AlignHCenter
+                }
+                
+                Label {
+                    text: "Version 1.0"
+                    font.pixelSize: 14
+                    color: "#aaa"
+                    Layout.alignment: Qt.AlignHCenter
+                }
+                
+                Label {
+                    text: "Built with Qt C++"
+                    font.pixelSize: 14
+                    color: "#aaa"
+                    Layout.alignment: Qt.AlignHCenter
+                }
+                
+                Label {
+                    text: "Covered under <a href='https://www.gnu.org/licenses/gpl-3.0.html'>GPLv3 License</a>"
+                    font.pixelSize: 14
+                    color: "white"
+                    linkColor: "#0078d7"
+                    Layout.alignment: Qt.AlignHCenter
+                    onLinkActivated: Qt.openUrlExternally(link)
+                }
+                
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 1
+                    color: "#33333b"
+                }
+                
+                Label {
+                    text: "Developed by <a href='https://github.com/LordTael125'>LordTael125</a>"
+                    font.pixelSize: 16
+                    color: "white"
+                    linkColor: "#0078d7"
+                    Layout.alignment: Qt.AlignHCenter
+                    onLinkActivated: Qt.openUrlExternally(link)
+                }
+                
+                Item { Layout.fillHeight: true }
+                
+                Button {
+                    text: "Close"
+                    Layout.alignment: Qt.AlignHCenter
+                    background: Rectangle { color: "#33333b"; radius: 6; implicitWidth: 100; implicitHeight: 35 }
+                    contentItem: Text { text: parent.text; color: "white"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.bold: true }
+                    onClicked: supportPopup.close()
+                }
             }
         }
         
@@ -234,14 +536,39 @@ ApplicationWindow {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     clip: true
-                    model: trackModel
+                    model: window.playbackQueue
+                    
+                    add: Transition { NumberAnimation { properties: "y"; duration: 250; easing.type: Easing.OutQuad } }
+                    displaced: Transition { NumberAnimation { properties: "y"; duration: 250; easing.type: Easing.OutQuad } }
+                    remove: Transition { NumberAnimation { properties: "y"; duration: 250; easing.type: Easing.OutQuad } }
                     
                     delegate: ItemDelegate {
                         width: ListView.view.width
-                        height: 60
                         
-                        // Only show items after the currently playing index
-                        visible: index > window.currentPlayingIndex
+                        property bool isVisibleItem: index >= window.currentQueueIndex
+                        
+                        height: isVisibleItem ? 60 : 0
+                        opacity: isVisibleItem ? 1.0 : 0.0
+                        visible: height > 0 || opacity > 0
+                        
+                        Behavior on height { NumberAnimation { duration: 300; easing.type: Easing.OutCubic } }
+                        Behavior on opacity { NumberAnimation { duration: 250 } }
+                        
+                        // Highlight current playing song
+                        background: Rectangle {
+                            color: index === window.currentQueueIndex ? "#2a2a35" : (parent.hovered ? "#22222b" : "transparent")
+                            radius: 6
+                            
+                            Behavior on color { ColorAnimation { duration: 250 } }
+                            
+                            Rectangle {
+                                width: 4
+                                height: parent.height
+                                anchors.left: parent.left
+                                color: "#0078d7"
+                                visible: index === window.currentQueueIndex
+                            }
+                        }
                         
                         RowLayout {
                             anchors.fill: parent
@@ -249,7 +576,7 @@ ApplicationWindow {
                             spacing: 15
 
                             Image {
-                                source: model.hasCoverArt ? "image://musiccover/" + model.filePath : "qrc:/qml/icons/play.svg"
+                                source: modelData.hasCoverArt ? "image://musiccover/" + modelData.filePath : "qrc:/qml/icons/play.svg"
                                 Layout.preferredWidth: 40
                                 Layout.preferredHeight: 40
                                 fillMode: Image.PreserveAspectCrop
@@ -260,7 +587,7 @@ ApplicationWindow {
                                 spacing: 2
 
                                 Text {
-                                    text: model.title
+                                    text: modelData.title
                                     color: "white"
                                     font.pixelSize: 14
                                     font.bold: true
@@ -269,7 +596,7 @@ ApplicationWindow {
                                 }
 
                                 Text {
-                                    text: model.artist
+                                    text: modelData.artist
                                     color: "#aaa"
                                     font.pixelSize: 12
                                     elide: Text.ElideRight
@@ -326,8 +653,8 @@ ApplicationWindow {
                     icon.color: "white"
                     display: AbstractButton.IconOnly
                     onClicked: {
-                        if (window.currentPlayingIndex > 0) {
-                            window.playTrackAtIndex(window.currentPlayingIndex - 1)
+                        if (window.currentQueueIndex > 0) {
+                            window.playTrackAtIndex(window.currentQueueIndex - 1)
                         }
                     }
                 }
@@ -339,7 +666,7 @@ ApplicationWindow {
                     width: 50
                     height: 50
                     onClicked: {
-                        if (window.currentPlayingIndex === -1 && trackModel.rowCount() > 0) {
+                        if (window.currentQueueIndex === -1 && window.playbackQueue.length > 0) {
                             window.playTrackAtIndex(0)
                         } else {
                             if (audioEngine.isPlaying) audioEngine.pause()
@@ -353,8 +680,8 @@ ApplicationWindow {
                     icon.color: "white"
                     display: AbstractButton.IconOnly
                     onClicked: {
-                        if (window.currentPlayingIndex >= 0 && window.currentPlayingIndex < trackModel.rowCount() - 1) {
-                            window.playTrackAtIndex(window.currentPlayingIndex + 1)
+                        if (window.currentQueueIndex >= 0 && window.currentQueueIndex < window.playbackQueue.length - 1) {
+                            window.playTrackAtIndex(window.currentQueueIndex + 1)
                         }
                     }
                 }
@@ -375,6 +702,24 @@ ApplicationWindow {
                 Text {
                     text: playbackBar.formatTime(audioEngine.duration)
                     color: "white"
+                }
+
+                ToolButton {
+                    icon.source: audioEngine.volume <= 0.01 ? "qrc:/qml/icons/volume_off.svg" : "qrc:/qml/icons/volume.svg"
+                    icon.color: "white"
+                    display: AbstractButton.IconOnly
+                    width: 40
+                    height: 40
+                    onClicked: window.showVolumePopup(this)
+                }
+
+                ToolButton {
+                    icon.source: "qrc:/qml/icons/eq.svg"
+                    icon.color: "white"
+                    display: AbstractButton.IconOnly
+                    width: 40
+                    height: 40
+                    onClicked: eqPopup.open()
                 }
 
                 ToolButton {

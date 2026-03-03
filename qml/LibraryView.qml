@@ -6,6 +6,8 @@ import QtQuick.Controls.Material 2.15
 Item {
     id: libraryView
     property string activeCategoryName: "All Tracks"
+    property string categoryContext: "All Tracks"
+    property bool isSidebarVisible: true
     
     RowLayout {
         anchors.fill: parent
@@ -14,74 +16,83 @@ Item {
 
         // Left sidebar for filters
         Rectangle {
-            Layout.preferredWidth: 200
+            id: sidebarRect
+            Layout.preferredWidth: isSidebarVisible ? 200 : 0
             Layout.fillHeight: true
             color: "#18181c"
             radius: 12
+            clip: true
+            visible: Layout.preferredWidth > 0
+
+            Behavior on Layout.preferredWidth {
+                NumberAnimation { duration: 250; easing.type: Easing.InOutQuad }
+            }
             
             ColumnLayout {
                 anchors.fill: parent
-                anchors.margins: 10
                 
                 Label {
                     text: "Filters"
                     font.pixelSize: 20
                     font.bold: true
                     color: "white"
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.topMargin: 10
+                    Layout.bottomMargin: 10
                 }
                 
-                Button {
-                    text: "Tracks"
-                    Layout.fillWidth: true
-                    onClicked: {
-                        libraryView.activeCategoryName = "All Tracks"
-                        trackModel.filterAll()
-                        mainStack.clear()
-                        mainStack.push(trackGridComponent)
-                    }
-                }
+                Repeater {
+                    model: [
+                        { name: "Tracks", ctx: "All Tracks" },
+                        { name: "Artists", ctx: "Artists" },
+                        { name: "Albums", ctx: "Albums" },
+                        { name: "Folders", ctx: "Folders" },
+                        { name: "Collections", ctx: "Collections" }
+                    ]
+                    
+                    delegate: ItemDelegate {
+                        Layout.fillWidth: true
+                        height: 50
+                        hoverEnabled: true
 
-                
-                Button {
-                    text: "Artists"
-                    Layout.fillWidth: true
-                    onClicked: {
-                        libraryView.activeCategoryName = "Artists"
-                        mainStack.clear()
-                        mainStack.push(artistGridComponent)
-                    }
-                }
-                
-                Button {
-                    text: "Albums"
-                    Layout.fillWidth: true
-                    onClicked: {
-                        libraryView.activeCategoryName = "Albums"
-                        mainStack.clear()
-                        mainStack.push(albumGridComponent)
-                    }
-                }
+                        property bool isActive: libraryView.categoryContext === modelData.ctx
 
-                Button {
-                    text: "Folders"
-                    Layout.fillWidth: true
-                    onClicked: {
-                        libraryView.activeCategoryName = "Folders"
-                        mainStack.clear()
-                        mainStack.push(folderGridComponent)
+                        background: Rectangle {
+                            color: parent.isActive ? "#2a2a35" : (parent.hovered ? "#22222b" : "transparent")
+                            
+                            // Left accent bar for active tab
+                            Rectangle {
+                                width: 4
+                                height: parent.height
+                                anchors.left: parent.left
+                                color: "#0078d7" // Accent color
+                                visible: parent.parent.isActive
+                            }
+                        }
+
+                        contentItem: Text {
+                            text: modelData.name
+                            color: parent.isActive ? "white" : "#aaa"
+                            font.pixelSize: 16
+                            font.bold: parent.isActive
+                            verticalAlignment: Text.AlignVCenter
+                            leftPadding: 20
+                        }
+
+                        onClicked: {
+                            libraryView.activeCategoryName = modelData.name === "Tracks" ? "All Tracks" : modelData.name
+                            libraryView.categoryContext = modelData.ctx
+                            if (modelData.name === "Tracks") trackModel.filterAll()
+                            mainStack.clear()
+                            
+                            if (modelData.name === "Tracks") mainStack.push(trackGridComponent)
+                            else if (modelData.name === "Artists") mainStack.push(artistGridComponent)
+                            else if (modelData.name === "Albums") mainStack.push(albumGridComponent)
+                            else if (modelData.name === "Folders") mainStack.push(folderGridComponent)
+                            else if (modelData.name === "Collections") mainStack.push(collectionGridComponent)
+                        }
                     }
                 }
-
-                Button {
-                    text: "Collections"
-                    Layout.fillWidth: true
-                    onClicked: {
-                        libraryView.activeCategoryName = "Collections"
-                        mainStack.clear()
-                        mainStack.push(collectionGridComponent)
-                    }
-                }
-
                 Item { Layout.fillHeight: true } // spacer
             }
         }
@@ -96,13 +107,35 @@ Item {
                 anchors.fill: parent
                 spacing: 15
 
-                Label {
-                    text: libraryView.activeCategoryName
-                    font.pixelSize: 28
-                    font.bold: true
-                    color: "white"
+                RowLayout {
+                    Layout.fillWidth: true
                     Layout.leftMargin: 10
                     Layout.topMargin: 5
+                    spacing: 10
+
+                    ToolButton {
+                        icon.source: libraryView.isSidebarVisible ? "qrc:/qml/icons/panel_close.svg" : "qrc:/qml/icons/panel_open.svg"
+                        icon.color: "white"
+                        onClicked: libraryView.isSidebarVisible = !libraryView.isSidebarVisible
+                    }
+
+                    ToolButton {
+                        visible: mainStack.depth > 1
+                        icon.source: "qrc:/qml/icons/back.svg"
+                        icon.color: "white"
+                        onClicked: {
+                            mainStack.pop()
+                            libraryView.activeCategoryName = libraryView.categoryContext
+                        }
+                    }
+
+                    Label {
+                        text: libraryView.activeCategoryName
+                        font.pixelSize: 28
+                        font.bold: true
+                        color: "white"
+                        Layout.fillWidth: true
+                    }
                 }
                 
                 StackView {
@@ -190,7 +223,7 @@ Item {
                     MouseArea {
                         anchors.fill: parent
                         onClicked: {
-                            window.playTrackAtIndex(index)
+                            window.playTrackAtIndex(index, libraryView.activeCategoryName)
                         }
                     }
                 }
