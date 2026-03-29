@@ -15,7 +15,7 @@
 
 ## 🌟 Overview
 
-**Music Player** is a modern, high-performance local audio library manager tailored for users who want premium aesthetics without sacrificing system resources. Built from the ground up using **C++**, **Qt Quick (QML)**, and **MiniAudio**, it delivers a buttery-smooth 60 FPS experience even on heavily constrained hardware (e.g., dual-core CPUs with 500 MB of RAM).
+**Music Player** is a modern, high-performance local audio library manager tailored for users who want premium aesthetics without sacrificing system resources. Built from the ground up using **C++**, **Qt Quick (QML)**, and **MiniAudio**, it delivers a buttery-smooth 60 FPS experience even on heavily constrained hardware (e.g., dual-core CPUs with 2GB of RAM).
 
 Say goodbye to electron-bloat. Whether you have an organized library of 100 tracks or a sprawling, chaotic folder of 10,000 FLAC and MP3 files, Music Player handles it seamlessly via background QtConcurrent database threading and heavy memory-culling.
 
