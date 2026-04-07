@@ -2,21 +2,37 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 import QtQuick.Controls.Material 2.15
+import Qt.labs.settings 1.0
 
 Item {
     id: libraryView
     property string activeCategoryName: "All Tracks"
     property string categoryContext: "All Tracks"
     property bool isSidebarVisible: false
-    signal menuClicked()
-    
+    property bool isListview: false
+    signal menuClicked
+
+    Settings {
+        id: librarySettings
+        category: "LibraryView"
+        property alias savedviewMode: libraryView.isListview
+    }
+
     function goBack() {
         if (mainStack.depth > 1) {
-            mainStack.pop()
-            libraryView.activeCategoryName = libraryView.categoryContext
+            mainStack.pop();
+            libraryView.activeCategoryName = libraryView.categoryContext;
         }
     }
-    
+
+    function switchview() {
+        if (isListview) {
+            isListview = false;
+        } else {
+            isListview = true;
+        }
+    }
+
     RowLayout {
         anchors.fill: parent
         anchors.margins: 20
@@ -33,12 +49,15 @@ Item {
             visible: Layout.preferredWidth > 0
 
             Behavior on Layout.preferredWidth {
-                NumberAnimation { duration: 250; easing.type: Easing.InOutQuad }
+                NumberAnimation {
+                    duration: 250
+                    easing.type: Easing.InOutQuad
+                }
             }
-            
+
             ColumnLayout {
                 anchors.fill: parent
-                
+
                 Label {
                     text: "Filters"
                     font.pixelSize: 20
@@ -48,16 +67,31 @@ Item {
                     Layout.topMargin: 10
                     Layout.bottomMargin: 10
                 }
-                
+
                 Repeater {
                     model: [
-                        { name: "Tracks", ctx: "All Tracks" },
-                        { name: "Artists", ctx: "Artists" },
-                        { name: "Albums", ctx: "Albums" },
-                        { name: "Folders", ctx: "Folders" },
-                        { name: "Collections", ctx: "Collections" }
+                        {
+                            name: "Tracks",
+                            ctx: "All Tracks"
+                        },
+                        {
+                            name: "Artists",
+                            ctx: "Artists"
+                        },
+                        {
+                            name: "Albums",
+                            ctx: "Albums"
+                        },
+                        {
+                            name: "Folders",
+                            ctx: "Folders"
+                        },
+                        {
+                            name: "Collections",
+                            ctx: "Collections"
+                        }
                     ]
-                    
+
                     delegate: ItemDelegate {
                         Layout.fillWidth: true
                         height: 50
@@ -67,7 +101,7 @@ Item {
 
                         background: Rectangle {
                             color: parent.isActive ? "#2a2a35" : (parent.hovered ? "#22222b" : "transparent")
-                            
+
                             // Left accent bar for active tab
                             Rectangle {
                                 width: 4
@@ -88,29 +122,29 @@ Item {
                         }
 
                         onClicked: {
-                            libraryView.activeCategoryName = modelData.name === "Tracks" ? "All Tracks" : modelData.name
-                            libraryView.categoryContext = modelData.ctx
-                            if (modelData.name === "Tracks") trackModel.filterAll()
-                            mainStack.clear()
-                            
-                            if (modelData.name === "Tracks") mainStack.push(trackGridComponent)
-                            else if (modelData.name === "Artists") mainStack.push(artistGridComponent)
-                            else if (modelData.name === "Albums") mainStack.push(albumGridComponent)
-                            else if (modelData.name === "Folders") mainStack.push(folderGridComponent)
-                            else if (modelData.name === "Collections") mainStack.push(collectionGridComponent)
+                            libraryView.activeCategoryName = modelData.name === "Tracks" ? "All Tracks" : modelData.name;
+                            libraryView.categoryContext = modelData.ctx;
+                            if (modelData.name === "Tracks")
+                                trackModel.filterAll();
+                            mainStack.clear();
+                            mainStack.push(unifiedCategoryView, {
+                                categoryType: modelData.name
+                            });
                         }
                     }
                 }
-                Item { Layout.fillHeight: true } // spacer
+                Item {
+                    Layout.fillHeight: true
+                } // spacer
             }
         }
-        
+
         // Right side: Tile Grid view
         Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
             color: "transparent"
-            
+
             ColumnLayout {
                 anchors.fill: parent
                 spacing: 15
@@ -141,7 +175,13 @@ Item {
                         color: "white"
                         Layout.fillWidth: true
                     }
-                    
+
+                    ToolButton {
+                        icon.source: libraryView.isListview ? "qrc:/qml/icons/view_list.svg" : "qrc:/qml/icons/view_grid.svg"
+                        icon.color: "white"
+                        onClicked: libraryView.switchview()
+                    }
+
                     ToolButton {
                         icon.source: "qrc:/qml/icons/menu.svg"
                         icon.color: "white"
@@ -151,375 +191,277 @@ Item {
                         onClicked: libraryView.menuClicked()
                     }
                 }
-                
+
                 StackView {
                     id: mainStack
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    initialItem: trackGridComponent
+                    Component.onCompleted: push(unifiedCategoryView, {
+                        categoryType: "Tracks"
+                    })
                 }
             }
         }
     }
 
     Component {
-        id: trackGridComponent
-        GridView {
-            model: trackModel
-            cellWidth: 160
-            cellHeight: 200
-            clip: true
-            cacheBuffer: 1000
-            
-            delegate: Item {
-                width: 160
-                height: 200
-                
-                Rectangle {
-                    anchors.fill: parent
-                    anchors.margins: 10
-                    color: window.currentPlayingPath === model.filePath ? "#2a2a35" : "#202025"
-                    radius: 8
-                    border.color: window.currentPlayingPath === model.filePath ? "#0078d7" : "transparent"
-                    border.width: window.currentPlayingPath === model.filePath ? 2 : 0
-                    
-                    // Album Art
-                    Rectangle {
-                        id: artRect
-                        width: parent.width - 20
-                        height: width
-                        anchors.top: parent.top
-                        anchors.topMargin: 10
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        color: "#33333b"
-                        radius: 8
-                        clip: true
+        id: unifiedCategoryView
 
-                        Image {
+        Item {
+            id: categoryContainer
+            property string categoryType // "Tracks", "Artists", "Albums", "Folders", "Collections"
+            property var activeModel: {
+                if (categoryType === "Tracks")
+                    return trackModel;
+                if (categoryType === "Albums")
+                    return trackModel.getAlbumTiles();
+                if (categoryType === "Artists")
+                    return trackModel.getArtistTiles();
+                if (categoryType === "Folders")
+                    return trackModel.getFolderTiles();
+                if (categoryType === "Collections")
+                    return trackModel.getCollectionTiles();
+                return trackModel;
+            }
+
+            Loader {
+                anchors.fill: parent
+                sourceComponent: libraryView.isListview ? listComp : gridComp
+            }
+
+            Component {
+                id: gridComp
+                GridView {
+                    model: categoryContainer.activeModel
+                    cellWidth: categoryContainer.categoryType === "Tracks" ? 160 : 180
+                    cellHeight: categoryContainer.categoryType === "Tracks" ? 200 : 220
+                    clip: true
+                    cacheBuffer: 1000
+
+                    delegate: Item {
+                        width: categoryContainer.categoryType === "Tracks" ? 160 : 180
+                        height: categoryContainer.categoryType === "Tracks" ? 200 : 220
+
+                        property bool isTrack: categoryContainer.categoryType === "Tracks"
+                        property string dTitle: isTrack ? model.title : modelData.name
+                        property string dSubtitle: {
+                            if (isTrack)
+                                return model.artist;
+                            if (categoryContainer.categoryType === "Folders")
+                                return "Directory";
+                            if (categoryContainer.categoryType === "Collections")
+                                return "Collection";
+                            return modelData.artist || "";
+                        }
+                        property string dPath: isTrack ? model.filePath : (modelData.filePath || "")
+                        property bool dHasCoverArt: isTrack ? model.hasCoverArt : (modelData.hasCoverArt !== undefined ? modelData.hasCoverArt : false)
+
+                        Rectangle {
                             anchors.fill: parent
-                            source: model.hasCoverArt ? "image://musiccover/" + model.filePath : ""
-                            fillMode: Image.PreserveAspectCrop
-                            visible: model.hasCoverArt
-                            asynchronous: true
-                            sourceSize: Qt.size(200, 200)
-                        }
+                            anchors.margins: 10
+                            color: (isTrack && window.currentPlayingPath === dPath) ? "#2a2a35" : "#202025"
+                            radius: 8
+                            border.color: (isTrack && window.currentPlayingPath === dPath) ? "#0078d7" : "transparent"
+                            border.width: (isTrack && window.currentPlayingPath === dPath) ? 2 : 0
 
-                        Text {
-                            anchors.centerIn: parent
-                            text: "?"
-                            color: "#555"
-                            font.pixelSize: 40
-                            visible: !model.hasCoverArt
-                        }
-                    }
-                    
-                    Text {
-                        anchors.top: artRect.bottom
-                        anchors.topMargin: 10
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        anchors.margins: 10
-                        text: model.title
-                        color: "white"
-                        elide: Text.ElideRight
-                        font.bold: true
-                        horizontalAlignment: Text.AlignHCenter
-                    }
-                    
-                    Text {
-                        anchors.bottom: parent.bottom
-                        anchors.bottomMargin: 10
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        anchors.margins: 10
-                        text: model.artist
-                        color: "#aaa"
-                        elide: Text.ElideRight
-                        font.pixelSize: 12
-                        horizontalAlignment: Text.AlignHCenter
-                    }
-                    
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: {
-                            window.playTrackAtIndex(index, libraryView.activeCategoryName)
+                            Rectangle {
+                                id: artRect
+                                width: parent.width - 20
+                                height: width
+                                anchors.top: parent.top
+                                anchors.topMargin: 10
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                color: "#33333b"
+                                radius: categoryContainer.categoryType === "Artists" ? 100 : 8
+                                clip: true
+
+                                Image {
+                                    anchors.fill: parent
+                                    source: dHasCoverArt ? "image://musiccover/" + dPath : ""
+                                    fillMode: Image.PreserveAspectCrop
+                                    visible: dHasCoverArt
+                                    asynchronous: true
+                                    sourceSize: Qt.size(200, 200)
+                                }
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "?"
+                                    color: "#555"
+                                    font.pixelSize: 40
+                                    visible: !dHasCoverArt
+                                }
+                            }
+
+                            Text {
+                                id: titleText
+                                anchors.top: artRect.bottom
+                                anchors.topMargin: categoryContainer.categoryType === "Artists" ? 20 : 10
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.margins: 10
+                                text: dTitle
+                                color: "white"
+                                elide: Text.ElideRight
+                                font.bold: true
+                                font.pixelSize: categoryContainer.categoryType === "Artists" ? 18 : 14
+                                horizontalAlignment: Text.AlignHCenter
+                            }
+
+                            Text {
+                                visible: categoryContainer.categoryType !== "Artists"
+                                anchors.bottom: parent.bottom
+                                anchors.bottomMargin: 10
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.margins: 10
+                                text: dSubtitle
+                                color: "#aaa"
+                                elide: Text.ElideRight
+                                font.pixelSize: 12
+                                horizontalAlignment: Text.AlignHCenter
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    if (isTrack) {
+                                        window.playTrackAtIndex(index, libraryView.activeCategoryName);
+                                    } else {
+                                        libraryView.activeCategoryName = modelData.name;
+                                        if (categoryContainer.categoryType === "Albums")
+                                            trackModel.filterByAlbum(modelData.name);
+                                        else if (categoryContainer.categoryType === "Artists")
+                                            trackModel.filterByArtist(modelData.name);
+                                        else if (categoryContainer.categoryType === "Folders")
+                                            trackModel.filterByFolder(modelData.path);
+                                        else if (categoryContainer.categoryType === "Collections")
+                                            trackModel.filterByCollection(modelData.name);
+
+                                        mainStack.push(unifiedCategoryView, {
+                                            categoryType: "Tracks"
+                                        });
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
-        }
-    }
 
-    Component {
-        id: albumGridComponent
-        GridView {
-            model: trackModel.getAlbumTiles()
-            cellWidth: 180
-            cellHeight: 220
-            clip: true
-            cacheBuffer: 1000
-            delegate: Item {
-                width: 180
-                height: 220
-                Rectangle {
-                    anchors.fill: parent
-                    anchors.margins: 10
-                    color: "#202025"
-                    radius: 8
-                    Rectangle {
-                        id: albArt
-                        width: parent.width - 20
-                        height: width
-                        anchors.top: parent.top
-                        anchors.topMargin: 10
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        color: "#33333b"
-                        radius: 8
-                        clip: true
-                        Image {
-                            anchors.fill: parent
-                            source: modelData.hasCoverArt ? "image://musiccover/" + modelData.filePath : ""
-                            fillMode: Image.PreserveAspectCrop
-                            visible: modelData.hasCoverArt
-                            asynchronous: true
-                            sourceSize: Qt.size(200, 200)
-                        }
-                    }
-                    Text {
-                        anchors.top: albArt.bottom
-                        anchors.topMargin: 10
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        anchors.margins: 10
-                        text: modelData.name
-                        color: "white"
-                        elide: Text.ElideRight
-                        font.bold: true
-                        horizontalAlignment: Text.AlignHCenter
-                    }
-                    Text {
-                        anchors.bottom: parent.bottom
-                        anchors.bottomMargin: 10
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        anchors.margins: 10
-                        text: modelData.artist
-                        color: "#aaa"
-                        elide: Text.ElideRight
-                        font.pixelSize: 12
-                        horizontalAlignment: Text.AlignHCenter
-                    }
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: {
-                            libraryView.activeCategoryName = modelData.name
-                            trackModel.filterByAlbum(modelData.name)
-                            mainStack.push(trackGridComponent)
-                        }
-                    }
-                }
-            }
-        }
-    }
+            Component {
+                id: listComp
+                ListView {
+                    model: categoryContainer.activeModel
+                    clip: true
+                    cacheBuffer: 1000
 
-    Component {
-        id: artistGridComponent
-        GridView {
-            model: trackModel.getArtistTiles()
-            cellWidth: 180
-            cellHeight: 220
-            clip: true
-            cacheBuffer: 1000
-            delegate: Item {
-                width: 180
-                height: 220
-                Rectangle {
-                    anchors.fill: parent
-                    anchors.margins: 10
-                    color: "#202025"
-                    radius: 8
-                    Rectangle {
-                        id: artArt
-                        width: parent.width - 20
-                        height: width
-                        anchors.top: parent.top
-                        anchors.topMargin: 10
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        color: "#33333b"
-                        radius: 100 // circle
-                        clip: true
-                        Image {
-                            anchors.fill: parent
-                            source: modelData.hasCoverArt ? "image://musiccover/" + modelData.filePath : ""
-                            fillMode: Image.PreserveAspectCrop
-                            visible: modelData.hasCoverArt
-                            asynchronous: true
-                            sourceSize: Qt.size(200, 200)
-                        }
-                    }
-                    Text {
-                        anchors.top: artArt.bottom
-                        anchors.topMargin: 20
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        anchors.margins: 10
-                        text: modelData.name
-                        color: "white"
-                        elide: Text.ElideRight
-                        font.bold: true
-                        font.pixelSize: 18
-                        horizontalAlignment: Text.AlignHCenter
-                    }
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: {
-                            libraryView.activeCategoryName = modelData.name
-                            trackModel.filterByArtist(modelData.name)
-                            mainStack.push(trackGridComponent)
-                        }
-                    }
-                }
-            }
-        }
-    }
+                    delegate: Item {
+                        width: ListView.view.width
+                        height: 60
 
-    Component {
-        id: folderGridComponent
-        GridView {
-            model: trackModel.getFolderTiles()
-            cellWidth: 180
-            cellHeight: 220
-            clip: true
-            cacheBuffer: 1000
-            delegate: Item {
-                width: 180
-                height: 220
-                Rectangle {
-                    anchors.fill: parent
-                    anchors.margins: 10
-                    color: "#202025"
-                    radius: 8
-                    Rectangle {
-                        id: folderArt
-                        width: parent.width - 20
-                        height: width
-                        anchors.top: parent.top
-                        anchors.topMargin: 10
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        color: "#33333b"
-                        radius: 8
-                        clip: true
-                        Image {
-                            anchors.fill: parent
-                            source: modelData.hasCoverArt ? "image://musiccover/" + modelData.filePath : ""
-                            fillMode: Image.PreserveAspectCrop
-                            visible: modelData.hasCoverArt
-                            asynchronous: true
-                            sourceSize: Qt.size(200, 200)
+                        property bool isTrack: categoryContainer.categoryType === "Tracks"
+                        property string dTitle: isTrack ? model.title : modelData.name
+                        property string dSubtitle: {
+                            if (isTrack)
+                                return model.artist;
+                            if (categoryContainer.categoryType === "Folders")
+                                return "Directory";
+                            if (categoryContainer.categoryType === "Collections")
+                                return "Collection";
+                            return modelData.artist || "";
                         }
-                    }
-                    Text {
-                        anchors.top: folderArt.bottom
-                        anchors.topMargin: 10
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        anchors.margins: 10
-                        text: modelData.name
-                        color: "white"
-                        elide: Text.ElideRight
-                        font.bold: true
-                        horizontalAlignment: Text.AlignHCenter
-                    }
-                    Text {
-                        anchors.bottom: parent.bottom
-                        anchors.bottomMargin: 10
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        anchors.margins: 10
-                        text: "Directory"
-                        color: "#aaa"
-                        elide: Text.ElideRight
-                        font.pixelSize: 12
-                        horizontalAlignment: Text.AlignHCenter
-                    }
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: {
-                            libraryView.activeCategoryName = modelData.name
-                            trackModel.filterByFolder(modelData.path)
-                            mainStack.push(trackGridComponent)
-                        }
-                    }
-                }
-            }
-        }
-    }
+                        property string dPath: isTrack ? model.filePath : (modelData.filePath || "")
+                        property bool dHasCoverArt: isTrack ? model.hasCoverArt : (modelData.hasCoverArt !== undefined ? modelData.hasCoverArt : false)
 
-    Component {
-        id: collectionGridComponent
-        GridView {
-            model: trackModel.getCollectionTiles()
-            cellWidth: 180
-            cellHeight: 220
-            clip: true
-            cacheBuffer: 1000
-            delegate: Item {
-                width: 180
-                height: 220
-                Rectangle {
-                    anchors.fill: parent
-                    anchors.margins: 10
-                    color: "#202025"
-                    radius: 8
-                    Rectangle {
-                        id: collectionArt
-                        width: parent.width - 20
-                        height: width
-                        anchors.top: parent.top
-                        anchors.topMargin: 10
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        color: "#33333b"
-                        radius: 8
-                        clip: true
-                        Image {
+                        Rectangle {
                             anchors.fill: parent
-                            source: modelData.hasCoverArt ? "image://musiccover/" + modelData.filePath : ""
-                            fillMode: Image.PreserveAspectCrop
-                            visible: modelData.hasCoverArt
-                            asynchronous: true
-                            sourceSize: Qt.size(200, 200)
-                        }
-                    }
-                    Text {
-                        anchors.top: collectionArt.bottom
-                        anchors.topMargin: 10
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        anchors.margins: 10
-                        text: modelData.name
-                        color: "white"
-                        elide: Text.ElideRight
-                        font.bold: true
-                        horizontalAlignment: Text.AlignHCenter
-                    }
-                    Text {
-                        anchors.bottom: parent.bottom
-                        anchors.bottomMargin: 10
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        anchors.margins: 10
-                        text: "Collection"
-                        color: "#aaa"
-                        elide: Text.ElideRight
-                        font.pixelSize: 12
-                        horizontalAlignment: Text.AlignHCenter
-                    }
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: {
-                            libraryView.activeCategoryName = modelData.name
-                            trackModel.filterByCollection(modelData.name)
-                            mainStack.push(trackGridComponent)
+                            anchors.margins: 2
+                            color: (isTrack && window.currentPlayingPath === dPath) ? "#2a2a35" : (hoverArea.containsMouse ? "#22222b" : "transparent")
+                            border.color: (isTrack && window.currentPlayingPath === dPath) ? "#0078d7" : "transparent"
+                            border.width: (isTrack && window.currentPlayingPath === dPath) ? 2 : 0
+                            radius: 6
+
+                            Rectangle {
+                                id: listThumb
+                                width: 44
+                                height: 44
+                                anchors.left: parent.left
+                                anchors.leftMargin: 8
+                                anchors.verticalCenter: parent.verticalCenter
+                                color: "#33333b"
+                                radius: categoryContainer.categoryType === "Artists" ? 22 : 4
+                                clip: true
+
+                                Image {
+                                    anchors.fill: parent
+                                    source: dHasCoverArt ? "image://musiccover/" + dPath : ""
+                                    fillMode: Image.PreserveAspectCrop
+                                    visible: dHasCoverArt
+                                    asynchronous: true
+                                    sourceSize: Qt.size(100, 100)
+                                }
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "?"
+                                    color: "#555"
+                                    font.pixelSize: 20
+                                    visible: !dHasCoverArt
+                                }
+                            }
+
+                            Text {
+                                id: listTitleText
+                                anchors.left: listThumb.right
+                                anchors.leftMargin: 15
+                                anchors.right: parent.right
+                                anchors.rightMargin: 15
+                                anchors.top: parent.top
+                                anchors.topMargin: categoryContainer.categoryType === "Artists" ? 20 : 10
+                                text: dTitle
+                                color: "white"
+                                elide: Text.ElideRight
+                                font.bold: true
+                                font.pixelSize: 15
+                            }
+
+                            Text {
+                                visible: categoryContainer.categoryType !== "Artists"
+                                anchors.left: listThumb.right
+                                anchors.leftMargin: 15
+                                anchors.right: parent.right
+                                anchors.rightMargin: 15
+                                anchors.top: listTitleText.bottom
+                                anchors.topMargin: 2
+                                text: dSubtitle
+                                color: "#aaa"
+                                elide: Text.ElideRight
+                                font.pixelSize: 12
+                            }
+
+                            MouseArea {
+                                id: hoverArea
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                onClicked: {
+                                    if (isTrack) {
+                                        window.playTrackAtIndex(index, libraryView.activeCategoryName);
+                                    } else {
+                                        libraryView.activeCategoryName = modelData.name;
+                                        if (categoryContainer.categoryType === "Albums")
+                                            trackModel.filterByAlbum(modelData.name);
+                                        else if (categoryContainer.categoryType === "Artists")
+                                            trackModel.filterByArtist(modelData.name);
+                                        else if (categoryContainer.categoryType === "Folders")
+                                            trackModel.filterByFolder(modelData.path);
+                                        else if (categoryContainer.categoryType === "Collections")
+                                            trackModel.filterByCollection(modelData.name);
+
+                                        mainStack.push(unifiedCategoryView, {
+                                            categoryType: "Tracks"
+                                        });
+                                    }
+                                }
+                            }
                         }
                     }
                 }

@@ -25,7 +25,7 @@ ApplicationWindow {
     property string currentPlayingTitle: "No Song Playing"
     property string currentPlayingArtist: ""
     property string currentPlayingPath: ""
-    property string applicationVersion: "1.1"
+    property string applicationVersion: "1.2alpha"
     property bool currentPlayingHasCoverArt: false
     property var playbackQueue: []
     property int currentQueueIndex: -1
@@ -280,7 +280,6 @@ ApplicationWindow {
         context: Qt.ApplicationShortcut
         onActivated: Qt.quit()
     }
-    // Esc is naturally handled by Qt Popups to close them, so no explicit mapping needed here.
 
     // Header removed per blueprint. Menu button is now floating.
 

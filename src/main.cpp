@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
   // Application metadata for QSettings
   QCoreApplication::setOrganizationName("LordTael");
   QCoreApplication::setOrganizationDomain("lordtael.com");
-  QCoreApplication::setApplicationName("ModernMusicPlayer");
+  QCoreApplication::setApplicationName("MLP Player");
 
   QApplication app(argc, argv);
 

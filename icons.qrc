@@ -21,5 +21,7 @@
         <file>qml/icons/volume.svg</file>
         <file>qml/icons/drop_down.svg</file>
         <file>qml/icons/volume_off.svg</file>
+        <file>qml/icons/view_grid.svg</file>
+        <file>qml/icons/view_list.svg</file>
     </qresource>
 </RCC>
