@@ -50,6 +50,7 @@ ApplicationWindow {
         property real savedPosition: 0.0
         property int savedRepeatMode: 0
         property real savedVolume: 1.0
+        property alias savedIsFullScreen: window.isFullScreen
     }
 
     Timer {
@@ -281,8 +282,6 @@ ApplicationWindow {
         onActivated: Qt.quit()
     }
 
-    // Header removed per blueprint. Menu button is now floating.
-
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
@@ -291,8 +290,8 @@ ApplicationWindow {
         Rectangle {
             id: titleBar
             Layout.fillWidth: true
-            Layout.preferredHeight: window.isFullScreen ? 0 : 35
-            color: "transparent"
+            Layout.preferredHeight: window.isFullScreen ? 0 : 40
+            color: '#100f14'
             visible: !window.isFullScreen
 
             // Drag Handler for moving the frameless window

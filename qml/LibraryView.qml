@@ -16,6 +16,7 @@ Item {
         id: librarySettings
         category: "LibraryView"
         property alias savedviewMode: libraryView.isListview
+        property alias savedSidebarVisible: libraryView.isSidebarVisible
     }
 
     function goBack() {
@@ -35,8 +36,8 @@ Item {
 
     RowLayout {
         anchors.fill: parent
-        anchors.margins: 20
-        spacing: 20
+        anchors.margins: 5
+        spacing: 10
 
         // Left sidebar for filters
         Rectangle {
