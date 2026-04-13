@@ -5,11 +5,15 @@
 **Modern Music Player** is a cross-platform, local-library music player built entirely in **C++ with a Qt 5 / QML frontend**. It can:
 
 - Scan a folder (and all sub-folders) for audio files
-- Read metadata (artist, album, title, track number, genre) from audio tags
+- Read metadata (artist, album, title, track number, disc number, genre) from audio tags
 - Display artwork embedded in audio files
 - Play music using a high-performance audio engine
 - Adjust sound using a 10-band graphic equalizer
-- Maintain a playback queue with skip, repeat, seek functionality
+- Maintain a playback queue with skip, repeat (Off/Track/All), seek functionality
+- Launch in three distinct modes depending on how it is invoked (Library, Minimal, Queue)
+- Detect and redirect secondary instances via IPC to prevent duplicate window spawning
+- Display a compact 700×350 Minimal Now Playing view when opened from a file manager
+- Register itself with the OS as a handler for all common audio MIME types
 
 The project is structured so that the **business logic lives in C++** and the **UI is written in QML** (Qt's declarative UI language). These two worlds communicate through Qt's signal-slot mechanism and context properties.
 
@@ -26,6 +30,8 @@ The project is structured so that the **business logic lives in C++** and the **
 | **TagLib** | Audio tag reading (ID3, Vorbis, MP4) | Mature, reliable library for music metadata |
 | **SQLite via Qt Sql** | Persistent library database | Lightweight embedded database, ships with Qt |
 | **QtConcurrent** | Background threading | Safe Qt-aware thread pool |
+| **Qt Network (QLocalServer/Socket)** | Single-instance IPC | Unix domain socket communication between processes |
+| **Qt Labs Settings** | Session persistence | Cross-platform key-value store for queue/position restore |
 | **CMake 3.16+** | Build system | Industry standard, cross-platform build tool |
 
 ---
@@ -67,10 +73,11 @@ Music Player/
 │   ├── equalizer.cpp
 │   └── cover_art_provider.cpp
 ├── qml/                    ← All QML (UI) files
-│   ├── main.qml            ← Root window, playback bar, popups, shortcuts
-│   ├── LibraryView.qml     ← The main tabbed library browser
-│   ├── EqualizerView.qml   ← The EQ knobs UI
+│   ├── main.qml            ← Root window, playback bar, popups, shortcuts, mode routing
+│   ├── LibraryView.qml     ← The main tabbed library browser (5 view modes)
+│   ├── EqualizerView.qml   ← The EQ slider UI with preset management
 │   ├── NowPlayingView.qml  ← Full-screen now playing overlay
+│   ├── MinimalView.qml     ← Compact 700x350 now playing window for file-explorer launches
 │   └── icons/              ← SVG icons used in the UI
 ├── third_party/            ← Bundled header-only libraries
 │   └── miniaudio.h         ← The entire audio engine in one file

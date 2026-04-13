@@ -9,9 +9,11 @@ sudo apt install -y \
     cmake build-essential \
     qt5-default qtbase5-dev qtdeclarative5-dev \
     qml-module-qt-labs-platform \
+    qml-module-qt-labs-settings \
     qml-module-qtquick-controls2 \
     qml-module-qtquick-layouts \
     libqt5sql5-sqlite libqt5concurrent5 \
+    libqt5network5 qt5-default \
     libtag1-dev libtagc0-dev \
     pkg-config
 ```
@@ -168,6 +170,7 @@ Two resource files pack content into the binary:
     <file>qml/LibraryView.qml</file>
     <file>qml/EqualizerView.qml</file>
     <file>qml/NowPlayingView.qml</file>
+    <file>qml/MinimalView.qml</file>
   </qresource>
 </RCC>
 ```
@@ -205,8 +208,41 @@ The app stores data in the platform's standard application data directory:
 EQ presets (QSettings):
 | Platform | Path |
 |---------|------|
-| Linux | `~/.config/ModernMusicPlayer/EqualizerPresets.ini` |
-| Windows | Windows Registry: `HKCU\Software\ModernMusicPlayer\EqualizerPresets` |
+| Linux | `~/.config/LordTael/MLP Player.ini` |
+| Windows | Windows Registry: `HKCU\Software\LordTael\MLP Player` |
+
+---
+
+## 15.8 User-Space Installation (No sudo Required)
+
+The app can be installed for the current user only — no root privileges needed:
+
+```bash
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make -j$(nproc)
+make install   # Installs under $HOME — no sudo
+```
+
+Install targets:
+| File | Destination |
+|---|---|
+| `MusicPlayer` binary | `~/.var/app/com.musicplayer.mlmPlayer/MusicPlayer` |
+| `MusicPlayer.desktop` | `~/.local/share/applications/MusicPlayer.desktop` |
+| `AppIcon.png` | `~/.local/share/icons/hicolor/512x512/apps/MusicPlayer.png` |
+
+After install, register MIME types:
+```bash
+update-desktop-database ~/.local/share/applications
+```
+
+The `.desktop` file `Exec` field uses `$HOME` to be portable across any username:
+```desktop
+Exec=sh -c 'exec "$HOME/.var/app/com.musicplayer.mlmPlayer/MusicPlayer" "$@"' dummy %F
+MimeType=audio/mpeg;audio/flac;audio/mp4;audio/ogg;audio/x-wav;...
+```
+
+`%F` tells the file manager to pass all selected files as separate arguments to a **single** process launch.
 
 ---
 
@@ -215,24 +251,26 @@ EQ presets (QSettings):
 | File | Role |
 |------|------|
 | `CMakeLists.txt` | Build configuration |
-| `src/main.cpp` | App entry point, wires all components |
+| `src/main.cpp` | App entry point, IPC, argument parsing, wires all components |
 | `include/track.h` | Plain data struct for one song |
 | `include/track_model.h` | Qt model exposing tracks to QML |
-| `include/library_scanner.h` | Scans folders, reads tags, writes DB |
+| `include/library_scanner.h` | Scans folders, reads tags, writes DB, appends via IPC |
 | `include/audio_engine.h` | Plays audio, volume, seek, EQ chain |
 | `include/equalizer.h` | 10-band EQ with presets |
 | `include/cover_art_provider.h` | Serves album art images to QML |
 | `src/track_model.cpp` | Model implementation + sorting/filtering |
-| `src/library_scanner.cpp` | TagLib + SQLite + QtConcurrent |
+| `src/library_scanner.cpp` | TagLib + SQLite + QtConcurrent + appendSpecificFiles |
 | `src/audio_engine.cpp` | miniaudio integration |
 | `src/equalizer.cpp` | EQ band management + QSettings presets |
 | `src/cover_art_provider.cpp` | TagLib image extraction → QImage |
-| `qml/main.qml` | Root window, playback bar, popups, shortcuts |
+| `qml/main.qml` | Root window, session persistence, playback bar, popups, shortcuts |
 | `qml/LibraryView.qml` | Sidebar + tabbed tile grid + StackView |
-| `qml/EqualizerView.qml` | 10-band EQ sliders + preset ComboBox |
+| `qml/EqualizerView.qml` | 10-band EQ sliders + preset management |
 | `qml/NowPlayingView.qml` | Full-screen now playing overlay |
+| `qml/MinimalView.qml` | Compact 700x350 now playing for file-manager launches |
 | `third_party/miniaudio.h` | Complete audio engine (single header) |
-| `build_appimage.sh` | Linux AppImage packaging script |
+| `Dist/Linux/MusicPlayer.desktop` | OS desktop entry with MIME type declarations |
+| `Dist/Linux/build_appimage.sh` | Linux AppImage packaging script |
 
 ---
 

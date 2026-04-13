@@ -1,13 +1,14 @@
 # Chapter 11 — main.qml: The Root Window
 
-`main.qml` is the root of the entire UI. It is 787 lines and contains:
+`main.qml` is the root of the entire UI. It is over 1300 lines and contains:
 - The `ApplicationWindow` (the OS window)
-- A custom title bar (because the window is frameless)
-- Global playback state (current track, queue, queue index)
-- The playback bar (bottom controls)
-- All popups: equalizer, volume, now-playing, shortcuts, scanning progress
+- A custom frameless title bar (Library mode only)
+- Global playback state (current track, queue, queue index, repeat mode)
+- Session persistence (queue and position survive restarts via `Qt.labs.settings`)
+- The playback bar (bottom controls, Library mode only)
+- All popups: equalizer, volume, now-playing, shortcuts, about, scanning progress
 - The queue drawer
-- Keyboard shortcuts
+- Keyboard shortcuts (12 application-wide shortcuts)
 
 ---
 
@@ -16,40 +17,44 @@
 ```qml
 ApplicationWindow {
     id: window
-    width: 1260
-    height: 768
+    // Window size adapts to launch mode
+    width:  launchMode === "Library" ? 1260 : 700
+    height: launchMode === "Library" ?  768 : 350
     visible: true
+    visibility: launchMode === "Library" ? Window.Maximized : Window.Windowed
     title: qsTr("Modern Music Player")
 
-    // FramelessWindowHint removes the OS title bar and window chrome
+    // Frameless: no OS title bar — we draw our own
     flags: Qt.Window | Qt.FramelessWindowHint
 
-    // Material Dark theme
     Material.theme: Material.Dark
     Material.accent: Material.Purple
-    color: "#0a0a0c"   // Deep near-black background
+    color: "#0a0a0c"
 ```
 
-`Qt.FramelessWindowHint` removes the OS-provided title bar, giving us full control over how the window looks. The tradeoff is we must implement our own:
-- Title bar with window buttons
-- Drag-to-move
-- Minimize/Maximize/Close buttons
+In **Library mode**, the window starts maximised at 1260×768. In **Minimal** or **Queue** mode it opens as a 700×350 compact window. The title bar is only rendered in Library mode (`visible: launchMode === "Library"`).
 
 ---
 
 ## 11.2 Global State Properties
 
 ```qml
-// These are visible to ALL child QML files (LibraryView, NowPlayingView etc.)
-property string currentPlayingTitle:  "No Song Playing"
-property string currentPlayingArtist: ""
-property string currentPlayingPath:   ""
-property var    playbackQueue:        []    // Array of track objects
-property int    currentQueueIndex:    -1   // -1 means nothing playing
-property bool   repeatMode:           false
+// These are visible to ALL child QML files (LibraryView, NowPlayingView, MinimalView etc.)
+property string currentPlayingTitle:       "No Song Playing"
+property string currentPlayingArtist:      ""
+property string currentPlayingPath:        ""
+property bool   currentPlayingHasCoverArt: false
+property var    playbackQueue:             []   // Array of track JS objects
+property int    currentQueueIndex:         -1   // -1 means nothing playing
+property int    repeatMode:                0    // 0=Off, 1=Repeat Track, 2=Repeat All
+property bool   isFullScreen:              false
+property string applicationVersion:        "1.2alpha"
 ```
 
-Because these are declared on `window` (the root `ApplicationWindow` with `id: window`), any child QML file can read from or write to `window.currentPlayingTitle` etc.
+Note that `repeatMode` is an **integer with three states**, not a boolean:
+- `0` — Off: advance to next track only when queue is not at the end
+- `1` — Repeat Track: seek to 0 and replay the same song
+- `2` — Repeat All: advance normally, but loop back to index 0 at the end
 
 ---
 
@@ -101,14 +106,20 @@ function playTrackAtIndex(idx, contextCategory) {
 Connections {
     target: audioEngine
     function onPlaybackFinished() {
-        if (repeatMode) {
+        if (repeatMode === 1) {          // Repeat Track
             audioEngine.setPosition(0);
             audioEngine.play();
-        } else {
-            // Auto-advance to next track unless we're at the end
-            if (currentQueueIndex >= 0 && currentQueueIndex < playbackQueue.length - 1) {
+        } else if (repeatMode === 2) {   // Repeat All
+            if (currentQueueIndex < playbackQueue.length - 1) {
+                playTrackAtIndex(currentQueueIndex + 1);
+            } else {
+                playTrackAtIndex(0);     // Loop back to first track
+            }
+        } else {                         // Repeat Off
+            if (currentQueueIndex < playbackQueue.length - 1) {
                 playTrackAtIndex(currentQueueIndex + 1);
             }
+            // else: stay at end, do nothing
         }
     }
 }
@@ -173,82 +184,108 @@ Rectangle {
 ## 11.6 The Keyboard Shortcut System
 
 ```qml
-Shortcut { sequence: "Space";       onActivated: audioEngine.isPlaying ? audioEngine.pause() : audioEngine.play() }
-Shortcut { sequence: "Ctrl+Left";   onActivated: playTrackAtIndex(currentQueueIndex - 1) }
-Shortcut { sequence: "Ctrl+Right";  onActivated: playTrackAtIndex(currentQueueIndex + 1) }
-Shortcut { sequence: "Left";        onActivated: audioEngine.setPosition(audioEngine.position - 10.0) }
-Shortcut { sequence: "Right";       onActivated: audioEngine.setPosition(audioEngine.position + 10.0) }
-Shortcut { sequence: "Up";          onActivated: audioEngine.volume = Math.min(1.0, audioEngine.volume + 0.1) }
-Shortcut { sequence: "Down";        onActivated: audioEngine.volume = Math.max(0.0, audioEngine.volume - 0.1) }
-Shortcut { sequence: "Ctrl+M";      onActivated: { /* Toggle mute */ } }
-Shortcut { sequence: "Ctrl+P";      onActivated: queueDrawer.visible = !queueDrawer.visible }
-Shortcut { sequence: "F";           onActivated: libraryView.isSidebarVisible = !libraryView.isSidebarVisible }
-Shortcut { sequence: "Ctrl+Q";      onActivated: Qt.quit() }
+// All shortcuts use Qt.ApplicationShortcut — they fire even when
+// focus is inside a text field or button.
+Shortcut { sequence: "Space";       context: Qt.ApplicationShortcut
+           onActivated: audioEngine.isPlaying ? audioEngine.pause() : audioEngine.play() }
+
+Shortcut { sequence: "Ctrl+Left";   context: Qt.ApplicationShortcut
+           onActivated: {
+               if (audioEngine.position > 2.0) audioEngine.setPosition(0.0);
+               else if (currentQueueIndex > 0) playTrackAtIndex(currentQueueIndex - 1);
+           }}
+
+Shortcut { sequence: "Ctrl+Right";  context: Qt.ApplicationShortcut
+           onActivated: playTrackAtIndex(currentQueueIndex + 1) }
+
+Shortcut { sequence: "Left";        context: Qt.ApplicationShortcut
+           onActivated: audioEngine.setPosition(audioEngine.position - 10.0) }
+
+Shortcut { sequence: "Right";       context: Qt.ApplicationShortcut
+           onActivated: audioEngine.setPosition(audioEngine.position + 10.0) }
+
+Shortcut { sequence: "Up";          context: Qt.ApplicationShortcut
+           onActivated: audioEngine.volume = Math.min(1.0, audioEngine.volume + 0.1) }
+
+Shortcut { sequence: "Down";        context: Qt.ApplicationShortcut
+           onActivated: audioEngine.volume = Math.max(0.0, audioEngine.volume - 0.1) }
+
+Shortcut { sequence: "Ctrl+M";      context: Qt.ApplicationShortcut
+           onActivated: {
+               // Smart mute: remembers previous volume
+               if (audioEngine.volume > 0.01) {
+                   previousVolume = audioEngine.volume;
+                   audioEngine.volume = 0.0;
+               } else {
+                   audioEngine.volume = previousVolume > 0.01 ? previousVolume : 1.0;
+               }
+           }}
+
+Shortcut { sequence: "Ctrl+P";      context: Qt.ApplicationShortcut
+           onActivated: queueDrawer.visible = !queueDrawer.visible }
+
+Shortcut { sequence: "F";           context: Qt.ApplicationShortcut
+           onActivated: libraryViewMain.isSidebarVisible = !libraryViewMain.isSidebarVisible }
+
+Shortcut { sequence: "Ctrl+Shift+F"; context: Qt.ApplicationShortcut
+           onActivated: toggleFullScreen() }
+
+Shortcut { sequence: "Backspace";   context: Qt.ApplicationShortcut
+           onActivated: libraryViewMain.goBack() }
+
+Shortcut { sequence: StandardKey.Back; context: Qt.ApplicationShortcut
+           onActivated: libraryViewMain.goBack() }
+
+Shortcut { sequence: "Ctrl+Q";      context: Qt.ApplicationShortcut
+           onActivated: Qt.quit() }
 ```
 
-`Qt.ApplicationShortcut` context means the shortcut works even when focus is inside a text input. Without it, pressing Space while a button is focused would activate both the button AND the shortcut.
+| Key | Action |
+|---|---|
+| `Space` | Play / Pause |
+| `Ctrl+Left` | Previous track (or restart if >2s played) |
+| `Ctrl+Right` | Next track |
+| `Left` / `Right` | Seek ±10 seconds |
+| `Up` / `Down` | Volume ±10% |
+| `Ctrl+M` | Mute / Unmute (preserves volume) |
+| `Ctrl+P` | Toggle Queue Drawer |
+| `F` | Toggle Library Sidebar |
+| `Ctrl+Shift+F` | Toggle Fullscreen |
+| `Backspace` | Navigate back in Library |
+| `Ctrl+Q` | Quit |
 
 ---
 
 ## 11.7 The Bottom Playback Bar
 
-This is the persistent control bar at the bottom (80px tall, always visible):
+The bottom playback bar is **only visible in Library mode** (hidden in Minimal/Queue modes where `MinimalView` handles its own controls). It uses a three-section layout inside a `Rectangle` (90px tall):
 
+```html
+<div style="display: flex; border: 2px solid #ccc; border-radius: 8px; font-family: monospace; text-align: center; background: #fafafa; margin: 20px 0;">
+  <div style="flex: 1; border-right: 1px solid #ccc; padding: 15px;">
+    <strong>LEFT</strong><br/>[Art] [Title / Artist]
+  </div>
+  <div style="flex: 2; border-right: 1px solid #ccc; padding: 15px;">
+    <strong>CENTER</strong><br/>[Prev] [Play] [Next] [Repeat] <span style="margin-left:20px;">00:00 ─────── 03:37</span>
+  </div>
+  <div style="flex: 1; padding: 15px;">
+    <strong>RIGHT</strong><br/>[Vol] [EQ] [Queue]
+  </div>
+</div>
+```
+
+- **Left section**: 80×80 cover art thumbnail (tapping toggles `nowPlayingPopup`) + title + artist
+- **Center section**: Prev / Play+Pause / Next / Repeat buttons + seek `Slider` with timestamps
+- **Right section**: Volume button + EQ button + Queue button
+
+The play button has a special guard:
 ```qml
-Rectangle {
-    id: playbackBar
-    width: parent.width; height: 80
-    anchors.bottom: parent.bottom
-    color: "#18181c"
-
-    function formatTime(seconds) {
-        if (!seconds || isNaN(seconds)) return "00:00";
-        let m = Math.floor(seconds / 60);
-        let s = Math.floor(seconds % 60);
-        return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
-    }
-
-    RowLayout {
-        // Expand/Collapse Now Playing overlay button
-        ToolButton { icon.source: nowPlayingPopup.opened ? "expand_down.svg" : "expand_up.svg"
-                     onClicked: nowPlayingPopup.opened ? nowPlayingPopup.close() : nowPlayingPopup.open() }
-
-        // Previous / Play-Pause / Next
-        RoundButton { icon.source: "prev.svg";  onClicked: playTrackAtIndex(currentQueueIndex - 1) }
-        RoundButton {
-            icon.source: audioEngine.isPlaying ? "pause.svg" : "play.svg"
-            onClicked: {
-                if (currentQueueIndex === -1 && playbackQueue.length > 0)
-                    playTrackAtIndex(0)   // Auto-start first track
-                else
-                    audioEngine.isPlaying ? audioEngine.pause() : audioEngine.play()
-            }
-        }
-        RoundButton { icon.source: "next.svg";  onClicked: playTrackAtIndex(currentQueueIndex + 1) }
-
-        // Current time
-        Text { text: playbackBar.formatTime(audioEngine.position); color: "white" }
-
-        // Seek slider (binds bidirectionally to audioEngine.position)
-        Slider {
-            Layout.fillWidth: true
-            from: 0; to: audioEngine.duration
-            value: audioEngine.position
-            onMoved: audioEngine.position = value   // WRITE triggers setPosition()
-        }
-
-        // Total duration
-        Text { text: playbackBar.formatTime(audioEngine.duration); color: "white" }
-
-        // Volume
-        ToolButton { onClicked: window.showVolumePopup(this) }
-
-        // Equalizer
-        ToolButton { onClicked: eqPopup.open() }
-
-        // Queue
-        ToolButton { onClicked: queueDrawer.open() }
-    }
+onClicked: {
+    // If nothing is queued to play yet, auto-start from index 0
+    if (currentQueueIndex === -1 && playbackQueue.length > 0)
+        playTrackAtIndex(0)
+    else
+        audioEngine.isPlaying ? audioEngine.pause() : audioEngine.play()
 }
 ```
 
@@ -291,4 +328,47 @@ Drawer {
         }
     }
 }
+```
+
+---
+
+## 11.9 Session Persistence
+
+`main.qml` uses `Qt.labs.settings` (`QSettings` under the hood) to remember the user's listening state across restarts:
+
+```qml
+Settings {
+    id: sessionSettings
+    category: "MediaPlayer"
+    property string savedQueue:        "[]"   // JSON array of file paths
+    property int    savedQueueIndex:   -1
+    property real   savedPosition:     0.0
+    property int    savedRepeatMode:   0
+    property real   savedVolume:       1.0
+}
+```
+
+**Saving** happens in `Component.onDestruction` (called when the window is closed):
+```qml
+Component.onDestruction: {
+    let paths = [];
+    for (let i = 0; i < playbackQueue.length; i++) {
+        paths.push(playbackQueue[i].filePath);
+    }
+    sessionSettings.savedQueue = JSON.stringify(paths);
+    sessionSettings.savedQueueIndex = currentQueueIndex;
+    sessionSettings.savedPosition   = audioEngine.position;
+    sessionSettings.savedVolume     = audioEngine.volume;
+    sessionSettings.savedRepeatMode = repeatMode;
+}
+```
+
+**Restoring** requires a two-timer pattern because the model is populated asynchronously:
+
+1. `startupRestoreTimer` (200ms, repeating) — polls `trackModel.rowCount()`. Once > 0, the library data is available, so it rebuilds the queue from saved file paths and seeks to `savedQueueIndex`.
+2. `restorePosTimer` (200ms, one-shot) — started after `audioEngine.loadFile()`. Waits for miniaudio to finish its async file-open before calling `audioEngine.setPosition(savedPosition)`.
+
+This two-stage approach is necessary because:
+- The model is populated via a deferred QTimer signal from C++
+- miniaudio decodes files asynchronously; seeking before decoding is ready is silently ignored
 ```

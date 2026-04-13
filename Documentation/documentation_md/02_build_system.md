@@ -46,7 +46,7 @@ set(CMAKE_AUTOUIC ON)
 > - `AUTOUIC`: Auto-processes `.ui` files (we don't use these, but it's good practice to enable).
 
 ```cmake
-find_package(Qt5 COMPONENTS Core Gui Widgets Qml Quick Sql Concurrent REQUIRED)
+find_package(Qt5 COMPONENTS Core Gui Widgets Qml Quick Sql Concurrent Network REQUIRED)
 ```
 > Finds the Qt5 installation on your system and enables the specified **modules**:
 >
@@ -59,6 +59,7 @@ find_package(Qt5 COMPONENTS Core Gui Widgets Qml Quick Sql Concurrent REQUIRED)
 > | `Quick` | QQuickImageProvider (for cover art) |
 > | `Sql` | QSqlDatabase, QSqlQuery (SQLite) |
 > | `Concurrent` | QtConcurrent::run() — background threads |
+> | `Network` | QLocalServer, QLocalSocket — single-instance IPC |
 
 ```cmake
 find_package(PkgConfig REQUIRED)
@@ -106,7 +107,7 @@ target_link_libraries(MusicPlayer PRIVATE
 )
 ```
 > Links the executable against:
-> - All Qt5 modules
+> - All Qt5 modules including `Qt5::Network` (for IPC)
 > - TagLib
 > - `dl` (dynamic linker, needed by miniaudio for `dlopen`)
 > - `pthread` (POSIX threads, needed by miniaudio)
@@ -126,6 +127,7 @@ Normal file paths like `"/home/user/qml/main.qml"` only work on that one machine
     <file>qml/LibraryView.qml</file>
     <file>qml/EqualizerView.qml</file>
     <file>qml/NowPlayingView.qml</file>
+    <file>qml/MinimalView.qml</file>
   </qresource>
 </RCC>
 ```
@@ -216,3 +218,22 @@ Object files (.o)
     ↓ linker (ld)
 MusicPlayer (final executable, ~20-40 MB)
 ```
+
+---
+
+## 2.7 User-Space Installation Rules
+
+Unlike system-wide installs (which need `sudo`), this app installs entirely into the current user's home directory:
+
+```cmake
+# Installation Targets for Local User Integration
+install(TARGETS MusicPlayer RUNTIME DESTINATION "$ENV{HOME}/.var/app/com.musicplayer.mlmPlayer")
+install(FILES "Dist/Linux/MusicPlayer.desktop" DESTINATION "$ENV{HOME}/.local/share/applications")
+install(FILES "Dist/Linux/AppIcon.png" DESTINATION "$ENV{HOME}/.local/share/icons/hicolor/512x512/apps" RENAME MusicPlayer.png)
+```
+
+After `make install`, run:
+```bash
+update-desktop-database ~/.local/share/applications
+```
+This registers the MIME type associations without requiring a reboot or root privileges.
