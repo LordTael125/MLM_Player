@@ -9,6 +9,11 @@
 #include "track_model.h"
 
 // TagLib includes
+#include <QtNetwork/QLocalServer>
+#include <QtNetwork/QLocalSocket>
+#include <qchar.h>
+#include <qcoreapplication.h>
+#include <qlist.h>
 #include <taglib/tdebuglistener.h>
 
 class SilentTagLibListener : public TagLib::DebugListener {
@@ -40,6 +45,29 @@ int main(int argc, char *argv[]) {
 
   QApplication app(argc, argv);
 
+  QStringList args = QCoreApplication::arguments();
+  QStringList filepath = args.mid(1);
+
+  // Single Instance Interceptor
+  QLocalSocket socket;
+  socket.connectToServer("MLP_MusicPlayerIPC");
+  if (socket.waitForConnected(500)) {
+    if (!filepath.isEmpty()) {
+      socket.write(filepath.join('\n').toUtf8());
+      socket.waitForBytesWritten(1000);
+    }
+    return 0; // Exit successfully, yielding to the original process
+  }
+
+  QString launchMode;
+  if (filepath.isEmpty()) {
+    launchMode = "Library";
+  } else if (filepath.size() == 1) {
+    launchMode = "Minimal";
+  } else {
+    launchMode = "Queue";
+  }
+
   // Register Equalizer structure for QML so it can interact with the pointer
   // correctly
   qmlRegisterUncreatableType<Equalizer>("com.musicplayer", 1, 0, "Equalizer",
@@ -53,11 +81,40 @@ int main(int argc, char *argv[]) {
   // Connect scanner to model
   QObject::connect(&libraryScanner, &LibraryScanner::tracksAdded, &trackModel,
                    &TrackModel::setTracks);
+  QObject::connect(&libraryScanner, &LibraryScanner::tracksAppended, &trackModel,
+                   &TrackModel::addTracks);
+
+  if (launchMode == "Library") {
+    libraryScanner.loadDatabase();
+  } else {
+    libraryScanner.loadSpecificFiles(filepath);
+  }
+
+  // Bind the IPC Server to catch new OS explorer hooks
+  QLocalServer::removeServer("MLP_MusicPlayerIPC");
+  QLocalServer *server = new QLocalServer(&app);
+  server->listen("MLP_MusicPlayerIPC");
+  QObject::connect(
+      server, &QLocalServer::newConnection, [&libraryScanner, server]() {
+        QLocalSocket *clientSocket = server->nextPendingConnection();
+        QObject::connect(clientSocket, &QLocalSocket::readyRead,
+                         [&libraryScanner, clientSocket]() {
+                           QByteArray data = clientSocket->readAll();
+                           QStringList newFiles = QString::fromUtf8(data).split(
+                               '\n', Qt::SkipEmptyParts);
+                           if (!newFiles.isEmpty()) {
+                             libraryScanner.appendSpecificFiles(newFiles);
+                           }
+                         });
+        QObject::connect(clientSocket, &QLocalSocket::disconnected,
+                         clientSocket, &QLocalSocket::deleteLater);
+      });
 
   QQmlApplicationEngine engine;
   engine.addImageProvider(QLatin1String("musiccover"), new CoverArtProvider);
 
   // Provide these to QML
+  engine.rootContext()->setContextProperty("launchMode", launchMode);
   engine.rootContext()->setContextProperty("audioEngine", &audioEngine);
   engine.rootContext()->setContextProperty("libraryScanner", &libraryScanner);
   engine.rootContext()->setContextProperty("trackModel", &trackModel);

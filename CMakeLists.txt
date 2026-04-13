@@ -11,7 +11,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 # Find Qt
-find_package(Qt5 COMPONENTS Core Gui Widgets Qml Quick Sql Concurrent REQUIRED)
+find_package(Qt5 COMPONENTS Core Gui Widgets Qml Quick Sql Concurrent Network REQUIRED)
 
 # Find TagLib
 find_package(PkgConfig REQUIRED)
@@ -51,12 +51,12 @@ add_executable(MusicPlayer
 
 # Link Libraries
 target_link_libraries(MusicPlayer PRIVATE
-    Qt5::Core Qt5::Gui Qt5::Widgets Qt5::Qml Qt5::Quick Qt5::Sql Qt5::Concurrent
+    Qt5::Core Qt5::Gui Qt5::Widgets Qt5::Qml Qt5::Quick Qt5::Sql Qt5::Concurrent Qt5::Network
     ${TAGLIB_LIBRARIES}
     dl pthread m
 )
 
-# Installation Targets for LinuxDeployQt / Desktop Integration
-install(TARGETS MusicPlayer RUNTIME DESTINATION bin)
-install(FILES "Dist/Linux/MusicPlayer.desktop" DESTINATION share/applications)
-install(FILES "Dist/Linux/AppIcon.png" DESTINATION share/icons/hicolor/512x512/apps RENAME MusicPlayer.png)
+# Installation Targets for Local User Integration
+install(TARGETS MusicPlayer RUNTIME DESTINATION "$ENV{HOME}/.var/app/com.musicplayer.mlmPlayer")
+install(FILES "Dist/Linux/MusicPlayer.desktop" DESTINATION "$ENV{HOME}/.local/share/applications")
+install(FILES "Dist/Linux/AppIcon.png" DESTINATION "$ENV{HOME}/.local/share/icons/hicolor/512x512/apps" RENAME MusicPlayer.png)

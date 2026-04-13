@@ -7,7 +7,7 @@
 [![C++](https://img.shields.io/badge/C++-17-blue.svg)](https://isocpp.org/)
 [![Qt](https://img.shields.io/badge/Qt-5.15-41cd52.svg)](https://www.qt.io/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Docs](https://img.shields.io/badge/Developer%20Guide-available-brightgreen)](https://lordtael125.github.io/Music-Player/)
+[![Docs](https://img.shields.io/badge/Developer%20Guide-available-brightgreen)](https://lordtael125.github.io/MLM_Player/)
 
 </div>
 

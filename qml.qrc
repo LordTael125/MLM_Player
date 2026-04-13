@@ -4,5 +4,6 @@
         <file>qml/LibraryView.qml</file>
         <file>qml/NowPlayingView.qml</file>
         <file>qml/EqualizerView.qml</file>
+        <file>qml/MinimalView.qml</file>
     </qresource>
 </RCC>

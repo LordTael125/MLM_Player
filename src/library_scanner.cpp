@@ -27,7 +27,6 @@
 
 LibraryScanner::LibraryScanner(QObject *parent) : QObject(parent) {
   initializeDatabase();
-  loadDatabase();
 }
 
 void LibraryScanner::initializeDatabase() {
@@ -236,4 +235,171 @@ void LibraryScanner::scanDirectory(const QString &directoryPath) {
         },
         Qt::QueuedConnection);
   });
+}
+
+void LibraryScanner::loadSpecificFiles(const QStringList &filePaths) {
+  QVector<Track> newTracks;
+  
+  for (const QString &filePath : filePaths) {
+    QString path = filePath;
+    if (path.startsWith("file://")) {
+      path = QUrl(path).toLocalFile();
+    }
+    
+    Track track;
+    track.filePath = path;
+
+    TagLib::FileRef f(path.toUtf8().constData());
+    if (!f.isNull() && f.tag()) {
+      TagLib::Tag *tag = f.tag();
+
+      track.title = QString::fromStdWString(tag->title().toWString());
+      track.artist = QString::fromStdWString(tag->artist().toWString());
+      track.album = QString::fromStdWString(tag->album().toWString());
+      track.genre = QString::fromStdWString(tag->genre().toWString());
+
+      if (track.title.isEmpty()) {
+        track.title = QFileInfo(path).completeBaseName();
+      }
+      if (track.artist.isEmpty()) {
+        track.artist = "Unknown Artist";
+      }
+
+      TagLib::PropertyMap properties = f.file()->properties();
+      if (properties.contains("TRACKNUMBER") && !properties["TRACKNUMBER"].isEmpty()) {
+        track.trackNumber = properties["TRACKNUMBER"].front().toInt();
+      } else {
+        track.trackNumber = tag->track();
+      }
+
+      if (properties.contains("DISCNUMBER") && !properties["DISCNUMBER"].isEmpty()) {
+        track.discNumber = properties["DISCNUMBER"].front().toInt();
+      }
+
+      if (f.audioProperties()) {
+        track.duration = f.audioProperties()->lengthInSeconds();
+      }
+
+      // Check for cover art
+      bool hasArt = false;
+      if (path.endsWith(".mp3", Qt::CaseInsensitive)) {
+        TagLib::MPEG::File mpegFile(path.toUtf8().constData());
+        if (mpegFile.hasID3v2Tag()) {
+          TagLib::ID3v2::Tag *id3v2tag = mpegFile.ID3v2Tag();
+          if (id3v2tag) {
+            auto frameList = id3v2tag->frameListMap()["APIC"];
+            if (!frameList.isEmpty()) {
+              hasArt = true;
+            }
+          }
+        }
+      } else if (path.endsWith(".flac", Qt::CaseInsensitive)) {
+        TagLib::FLAC::File flacFile(path.toUtf8().constData());
+        if (flacFile.isValid() && !flacFile.pictureList().isEmpty()) {
+          hasArt = true;
+        }
+      } else if (path.endsWith(".m4a", Qt::CaseInsensitive)) {
+        TagLib::MP4::File mp4File(path.toUtf8().constData());
+        if (mp4File.isValid() && mp4File.tag()) {
+          auto itemList = mp4File.tag()->itemMap();
+          if (itemList.contains("covr")) {
+            hasArt = true;
+          }
+        }
+      }
+      track.hasCoverArt = hasArt;
+    } else {
+      track.title = QFileInfo(path).completeBaseName();
+      track.artist = "Unknown Artist";
+    }
+
+    newTracks.append(track);
+  }
+
+  m_tracks.clear();
+  m_tracks.append(newTracks);
+  emit tracksAdded(m_tracks);
+}
+
+void LibraryScanner::appendSpecificFiles(const QStringList &filePaths) {
+  QVector<Track> newTracks;
+  
+  for (const QString &filePath : filePaths) {
+    QString path = filePath;
+    if (path.startsWith("file://")) {
+      path = QUrl(path).toLocalFile();
+    }
+    
+    Track track;
+    track.filePath = path;
+
+    TagLib::FileRef f(path.toUtf8().constData());
+    if (!f.isNull() && f.tag()) {
+      TagLib::Tag *tag = f.tag();
+
+      track.title = QString::fromStdWString(tag->title().toWString());
+      track.artist = QString::fromStdWString(tag->artist().toWString());
+      track.album = QString::fromStdWString(tag->album().toWString());
+      track.genre = QString::fromStdWString(tag->genre().toWString());
+
+      if (track.title.isEmpty()) {
+        track.title = QFileInfo(path).completeBaseName();
+      }
+      if (track.artist.isEmpty()) {
+        track.artist = "Unknown Artist";
+      }
+
+      TagLib::PropertyMap properties = f.file()->properties();
+      if (properties.contains("TRACKNUMBER") && !properties["TRACKNUMBER"].isEmpty()) {
+        track.trackNumber = properties["TRACKNUMBER"].front().toInt();
+      } else {
+        track.trackNumber = tag->track();
+      }
+
+      if (properties.contains("DISCNUMBER") && !properties["DISCNUMBER"].isEmpty()) {
+        track.discNumber = properties["DISCNUMBER"].front().toInt();
+      }
+
+      if (f.audioProperties()) {
+        track.duration = f.audioProperties()->lengthInSeconds();
+      }
+
+      // Check for cover art
+      bool hasArt = false;
+      if (path.endsWith(".mp3", Qt::CaseInsensitive)) {
+        TagLib::MPEG::File mpegFile(path.toUtf8().constData());
+        if (mpegFile.hasID3v2Tag()) {
+          TagLib::ID3v2::Tag *id3v2tag = mpegFile.ID3v2Tag();
+          if (id3v2tag) {
+            auto frameList = id3v2tag->frameListMap()["APIC"];
+            if (!frameList.isEmpty()) {
+              hasArt = true;
+            }
+          }
+        }
+      } else if (path.endsWith(".flac", Qt::CaseInsensitive)) {
+        TagLib::FLAC::File flacFile(path.toUtf8().constData());
+        if (flacFile.isValid() && !flacFile.pictureList().isEmpty()) {
+          hasArt = true;
+        }
+      } else if (path.endsWith(".m4a", Qt::CaseInsensitive)) {
+        TagLib::MP4::File mp4File(path.toUtf8().constData());
+        if (mp4File.isValid() && mp4File.tag()) {
+          auto itemList = mp4File.tag()->itemMap();
+          if (itemList.contains("covr")) {
+            hasArt = true;
+          }
+        }
+      }
+      track.hasCoverArt = hasArt;
+    } else {
+      track.title = QFileInfo(path).completeBaseName();
+      track.artist = "Unknown Artist";
+    }
+
+    newTracks.append(track);
+  }
+
+  m_tracks.append(newTracks);
+  emit tracksAppended(newTracks);
 }

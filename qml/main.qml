@@ -9,10 +9,10 @@ import QtGraphicalEffects 1.15
 
 ApplicationWindow {
     id: window
-    width: 1260
-    height: 768
+    width: launchMode === "Library" ? 1260 : 700
+    height: launchMode === "Library" ? 768 : 350
     visible: true
-    visibility: Window.Maximized
+    visibility: launchMode === "Library" ? Window.Maximized : Window.Windowed
     title: qsTr("Modern Music Player")
     flags: Qt.Window | Qt.FramelessWindowHint
 
@@ -32,6 +32,51 @@ ApplicationWindow {
     property int repeatMode: 0 // 0: Off, 1: Track, 2: All
 
     property bool isFullScreen: false
+
+    Component.onCompleted: {
+        if (launchMode !== "Library") {
+            let newQueue = [];
+            for (let i = 0; i < trackModel.rowCount(); i++) {
+                newQueue.push(trackModel.get(i));
+            }
+            window.playbackQueue = newQueue;
+            if (newQueue.length > 0) {
+                window.playTrackAtIndex(0, "CLI");
+            }
+        }
+    }
+
+    Connections {
+        target: libraryScanner
+        function onTracksAdded(tracks) {
+            // Used for initial startup and library loads
+            if (!startupRestoreTimer.running && trackModel.rowCount() > 0) {
+                let newQueue = [];
+                for (let i = 0; i < trackModel.rowCount(); i++) {
+                    newQueue.push(trackModel.get(i));
+                }
+                window.playbackQueue = newQueue;
+                window.playTrackAtIndex(0, "IPC");
+            }
+        }
+
+        function onTracksAppended(tracks) {
+            // Appends tracks precisely when multiple files are opened randomly via OS explorer!
+            if (window.visibility !== Window.Hidden) {
+                let newQueue = [];
+                for (let i = 0; i < trackModel.rowCount(); i++) {
+                    newQueue.push(trackModel.get(i));
+                }
+                
+                let wasEmpty = window.playbackQueue.length === 0;
+                window.playbackQueue = newQueue;
+                
+                if (wasEmpty) {
+                    window.playTrackAtIndex(0, "IPC");
+                }
+            }
+        }
+    }
     function toggleFullScreen() {
         if (isFullScreen) {
             window.showMaximized();
@@ -57,7 +102,7 @@ ApplicationWindow {
         id: startupRestoreTimer
         interval: 200
         repeat: true
-        running: true
+        running: launchMode === "Library"
         onTriggered: {
             if (trackModel.rowCount() > 0) {
                 running = false;
@@ -292,7 +337,7 @@ ApplicationWindow {
             Layout.fillWidth: true
             Layout.preferredHeight: window.isFullScreen ? 0 : 40
             color: '#100f14'
-            visible: !window.isFullScreen
+            visible: !window.isFullScreen && launchMode === "Library"
 
             // Drag Handler for moving the frameless window
             DragHandler {
@@ -355,11 +400,23 @@ ApplicationWindow {
         Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
+            visible: launchMode === "Library"
 
             LibraryView {
                 id: libraryViewMain
                 anchors.fill: parent
                 onMenuClicked: mainMenuPopup.open()
+            }
+        }
+
+        Item {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            visible: launchMode !== "Library"
+
+            MinimalView {
+                id: minimalViewMain
+                anchors.fill: parent
             }
         }
 
@@ -495,6 +552,28 @@ ApplicationWindow {
                     onClicked: {
                         mainMenuPopup.close();
                         supportPopup.open();
+                    }
+                }
+                Button {
+                    visible: window.isFullScreen
+                    Layout.fillWidth: true
+                    text: "Exit"
+                    contentItem: Text {
+                        text: parent.text
+                        color: "white"
+                        font.pixelSize: 15
+                        verticalAlignment: Text.AlignVCenter
+                        leftPadding: 15
+                        topPadding: 8
+                        bottomPadding: 8
+                    }
+                    background: Rectangle {
+                        color: parent.hovered ? "#2a2a35" : "transparent"
+                        radius: 4
+                    }
+                    onClicked: {
+                        mainMenuPopup.close();
+                        window.close();
                     }
                 }
             }
@@ -1018,6 +1097,7 @@ ApplicationWindow {
             id: playbackBar
             Layout.fillWidth: true
             Layout.preferredHeight: 90
+            visible: launchMode === "Library"
             color: "#18181c"
             border.color: "#33333b"
             border.width: 1

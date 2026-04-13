@@ -17,17 +17,20 @@ public:
 
 public slots:
   void scanDirectory(const QString &directoryPath);
+  void loadSpecificFiles(const QStringList &filePaths);
+  void appendSpecificFiles(const QStringList &filePaths);
+  void loadDatabase();
   void clearDatabase();
 
 signals:
   void scanStarted();
   void scanProgress(int filesProcessed);
   void scanFinished(int totalFiles);
-  void tracksAdded(const QVector<Track> &newTracks);
+  void tracksAdded(const QVector<Track> &tracks);
+  void tracksAppended(const QVector<Track> &tracks);
 
 private:
   void initializeDatabase();
-  void loadDatabase();
   void processFile(const QString &filePath);
 
   QVector<Track> m_tracks;
