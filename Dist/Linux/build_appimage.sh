@@ -30,9 +30,12 @@ mkdir -p AppDir
 
 # 2. Build and Install application to AppDir
 echo -e "${GREEN}[2/8] Building and Installing application to AppDir...${NC}"
-cmake "$PROJECT_DIR" -DCMAKE_INSTALL_PREFIX=/usr
+cmake "$PROJECT_DIR" -DCMAKE_INSTALL_PREFIX=/usr -DUSER_SPACE_INSTALL=OFF
 cmake --build . -j$(nproc)
 DESTDIR="$BUILD_DIR/AppDir" cmake --install .
+
+# 2.5 Fix desktop file for AppImage (linuxdeploy can't parse shell wrappers)
+sed -i 's/^Exec=sh -c .*/Exec=MusicPlayer %F/' "$BUILD_DIR/AppDir/usr/share/applications/MusicPlayer.desktop"
 
 # 3. Download LinuxDeploy dependencies if missing
 echo -e "${GREEN}[3/8] Checking LinuxDeploy tools...${NC}"

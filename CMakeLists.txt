@@ -56,7 +56,19 @@ target_link_libraries(MusicPlayer PRIVATE
     dl pthread m
 )
 
-# Installation Targets for Local User Integration
-install(TARGETS MusicPlayer RUNTIME DESTINATION "$ENV{HOME}/.var/app/com.musicplayer.mlmPlayer")
-install(FILES "Dist/Linux/MusicPlayer.desktop" DESTINATION "$ENV{HOME}/.local/share/applications")
-install(FILES "Dist/Linux/AppIcon.png" DESTINATION "$ENV{HOME}/.local/share/icons/hicolor/512x512/apps" RENAME MusicPlayer.png)
+# Installation Targets
+option(USER_SPACE_INSTALL "Install to the current user's home directory instead of standard system paths" ON)
+
+if(USER_SPACE_INSTALL)
+    set(BIN_DEST "$ENV{HOME}/.var/app/com.musicplayer.mlmPlayer")
+    set(APP_DEST "$ENV{HOME}/.local/share/applications")
+    set(ICON_DEST "$ENV{HOME}/.local/share/icons/hicolor/512x512/apps")
+else()
+    set(BIN_DEST "bin")
+    set(APP_DEST "share/applications")
+    set(ICON_DEST "share/icons/hicolor/512x512/apps")
+endif()
+
+install(TARGETS MusicPlayer RUNTIME DESTINATION "${BIN_DEST}")
+install(FILES "Dist/Linux/MusicPlayer.desktop" DESTINATION "${APP_DEST}")
+install(FILES "Dist/Linux/AppIcon.png" DESTINATION "${ICON_DEST}" RENAME MusicPlayer.png)
