@@ -15,7 +15,7 @@
 
 ## 🌟 Overview
 
-**Music Player** is a modern, high-performance local audio library manager tailored for users who want premium aesthetics without sacrificing system resources. Built from the ground up using **C++**, **Qt Quick (QML)**, and **MiniAudio**, it delivers a buttery-smooth 60 FPS experience even on heavily constrained hardware (e.g., dual-core CPUs with 2GB of RAM).
+**MLM Player** is a modern, high-performance local audio library manager tailored for users who want premium aesthetics without sacrificing system resources. Built from the ground up using **C++**, **Qt Quick (QML)**, and **MiniAudio**, it delivers a buttery-smooth 60 FPS experience even on heavily constrained hardware (e.g., dual-core CPUs with 2GB of RAM).
 
 Say goodbye to electron-bloat. Whether you have an organized library of 100 tracks or a sprawling, chaotic folder of 10,000 FLAC and MP3 files, Music Player handles it seamlessly via background QtConcurrent database threading and heavy memory-culling.
 
@@ -121,7 +121,7 @@ You are free to use, modify, and distribute this software under the constraints 
 > 📖 **New contributor?** Read the complete [Developer Guide] for an in-depth walkthrough of the architecture, every C++ class, every QML view, and step-by-step build instructions.
 
 <div align="center">
-  <a href="https://lordtael125.github.io/Music-Player/">Documentation</a>
+  <a href="https://lordtael125.github.io/MLM_Player/">Documentation</a>
 </div>
 
 ---
