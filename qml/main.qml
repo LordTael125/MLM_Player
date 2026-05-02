@@ -25,7 +25,7 @@ ApplicationWindow {
     property string currentPlayingTitle: "No Song Playing"
     property string currentPlayingArtist: ""
     property string currentPlayingPath: ""
-    property string applicationVersion: "1.2alpha"
+    property string applicationVersion: "1.3-Alpha"
     property bool currentPlayingHasCoverArt: false
     property var playbackQueue: []
     property int currentQueueIndex: -1
@@ -67,10 +67,10 @@ ApplicationWindow {
                 for (let i = 0; i < trackModel.rowCount(); i++) {
                     newQueue.push(trackModel.get(i));
                 }
-                
+
                 let wasEmpty = window.playbackQueue.length === 0;
                 window.playbackQueue = newQueue;
-                
+
                 if (wasEmpty) {
                     window.playTrackAtIndex(0, "IPC");
                 }
@@ -84,6 +84,68 @@ ApplicationWindow {
         } else {
             window.showFullScreen();
             isFullScreen = true;
+        }
+    }
+
+    function handleGamepadNavigation(dir) {
+        var item = window.activeFocusItem;
+
+        // Resolve the actual list/grid view if the focused item is a delegate
+        if (item && typeof item.moveCurrentIndexUp !== "function") {
+            if (item.GridView && item.GridView.view)
+                item = item.GridView.view;
+            else if (item.ListView && item.ListView.view)
+                item = item.ListView.view;
+        }
+
+        var navigated = false;
+
+        console.log("Gamepad Navigation Dir:", dir, "ActiveFocusItem:", item);
+
+        if (item) {
+            if (dir === "Up") {
+                if (typeof item.moveCurrentIndexUp === "function") {
+                    item.moveCurrentIndexUp();
+                    navigated = true;
+                } else if (typeof item.decrementCurrentIndex === "function") {
+                    item.decrementCurrentIndex();
+                    navigated = true;
+                }
+            } else if (dir === "Down") {
+                if (typeof item.moveCurrentIndexDown === "function") {
+                    item.moveCurrentIndexDown();
+                    navigated = true;
+                } else if (typeof item.incrementCurrentIndex === "function") {
+                    item.incrementCurrentIndex();
+                    navigated = true;
+                }
+            } else if (dir === "Left") {
+                if (typeof item.moveCurrentIndexLeft === "function") {
+                    item.moveCurrentIndexLeft();
+                    navigated = true;
+                } else if (typeof item.decrementCurrentIndex === "function" && item.orientation === ListView.Horizontal) {
+                    item.decrementCurrentIndex();
+                    navigated = true;
+                }
+            } else if (dir === "Right") {
+                if (typeof item.moveCurrentIndexRight === "function") {
+                    item.moveCurrentIndexRight();
+                    navigated = true;
+                } else if (typeof item.incrementCurrentIndex === "function" && item.orientation === ListView.Horizontal) {
+                    item.incrementCurrentIndex();
+                    navigated = true;
+                }
+            }
+        }
+
+        if (!navigated) {
+            if (nowPlayingPopup.opened) {
+                // No grid in now playing
+            } else if (queueDrawer.opened) {
+                queueListView.forceActiveFocus();
+            } else if (launchMode === "Library") {
+                libraryViewMain.forceActiveContentFocus();
+            }
         }
     }
 
@@ -304,12 +366,18 @@ ApplicationWindow {
     Shortcut {
         sequence: "Up"
         context: Qt.ApplicationShortcut
-        onActivated: audioEngine.volume = Math.min(1.0, audioEngine.volume + 0.1)
+        onActivated: {
+            audioEngine.volume = Math.min(1.0, audioEngine.volume + 0.1);
+            volumeOSDPopup.show();
+        }
     }
     Shortcut {
         sequence: "Down"
         context: Qt.ApplicationShortcut
-        onActivated: audioEngine.volume = Math.max(0.0, audioEngine.volume - 0.1)
+        onActivated: {
+            audioEngine.volume = Math.max(0.0, audioEngine.volume - 0.1);
+            volumeOSDPopup.show();
+        }
     }
     Shortcut {
         sequence: "Ctrl+P"
@@ -325,6 +393,79 @@ ApplicationWindow {
         sequence: "Ctrl+Q"
         context: Qt.ApplicationShortcut
         onActivated: Qt.quit()
+    }
+
+    Popup {
+        id: volumeOSDPopup
+        x: Math.round((parent.width - width) / 2)
+        y: Math.round(parent.height * 0.85) // Bottom center
+        width: 250
+        height: 60
+        modal: false
+        focus: false
+        closePolicy: Popup.NoAutoClose
+
+        background: Rectangle {
+            color: "#cc18181c"
+            radius: 30
+            border.color: "#33333b"
+            border.width: 1
+        }
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.margins: 0
+            spacing: 15
+
+            Image {
+                source: audioEngine.volume === 0.0 ? "qrc:/qml/icons/volume_off.svg" : "qrc:/qml/icons/volume.svg"
+                sourceSize: Qt.size(24, 24)
+                Layout.preferredWidth: 24
+                Layout.preferredHeight: 24
+            }
+
+            ProgressBar {
+                Layout.fillWidth: true
+                from: 0.0
+                to: 1.0
+                value: audioEngine.volume
+
+                background: Rectangle {
+                    implicitHeight: 6
+                    color: "#33333b"
+                    radius: 3
+                }
+                contentItem: Item {
+                    implicitHeight: 6
+                    Rectangle {
+                        width: parent.width * audioEngine.volume
+                        height: parent.height
+                        radius: 3
+                        color: "#0078d7"
+                    }
+                }
+            }
+
+            Label {
+                text: Math.round(audioEngine.volume * 100) + "%"
+                color: "white"
+                font.bold: true
+                font.pixelSize: 14
+                Layout.preferredWidth: 40
+                horizontalAlignment: Text.AlignRight
+            }
+        }
+
+        Timer {
+            id: volumeOSDTimer
+            interval: 2000
+            onTriggered: volumeOSDPopup.close()
+        }
+
+        function show() {
+            volumeOSDPopup.open();
+            volumeOSDTimer.restart();
+        }
     }
 
     ColumnLayout {
@@ -623,6 +764,7 @@ ApplicationWindow {
                 from: 0.0
                 to: 1.0
                 value: audioEngine.volume
+                focusPolicy: Qt.NoFocus
                 onMoved: audioEngine.volume = value
             }
         }
@@ -953,12 +1095,108 @@ ApplicationWindow {
             }
         }
 
+        Connections {
+            target: gamepad
+
+            function onButtonB() {
+                if (nowPlayingPopup.opened)
+                    nowPlayingPopup.close();
+                else if (queueDrawer.opened)
+                    queueDrawer.close();
+                else if (eqPopup.opened)
+                    eqPopup.close();
+                else if (shortcutsPopup.opened)
+                    shortcutsPopup.close();
+                else if (supportPopup.opened)
+                    supportPopup.close();
+                else if (mainMenuPopup.opened)
+                    mainMenuPopup.close();
+                else if (launchMode === "Library")
+                    libraryViewMain.goBack();
+                else if (volumePopup.opened)
+                    volumePopup.close();
+            }
+
+            function onButtonX() {
+                if (nowPlayingPopup.opened)
+                    nowPlayingPopup.close();
+                else
+                    nowPlayingPopup.open();
+            }
+
+            function onButtonY() {
+                if (launchMode === "Library") {
+                    libraryViewMain.toggleSidebar();
+                }
+            }
+
+            function onButtonStart() {
+                if (audioEngine.isPlaying)
+                    audioEngine.pause();
+                else
+                    audioEngine.play();
+            }
+
+            function onDpadUp() {
+                queueDrawer.visible = !queueDrawer.visible;
+            }
+
+            function onDpadDown() {
+                window.showVolumePopup(playbackBar);
+            }
+
+            function onTriggerLeft() {
+                audioEngine.setPosition(Math.max(0.0, audioEngine.position - 5.0));
+            }
+
+            function onTriggerRight() {
+                audioEngine.setPosition(Math.min(audioEngine.duration, audioEngine.position + 5.0));
+            }
+
+            function onVolumeChange(delta) {
+                audioEngine.volume = Math.max(0.0, Math.min(1.0, audioEngine.volume + delta));
+                volumeOSDPopup.show();
+            }
+
+            function onLeftStickUp() {
+                window.handleGamepadNavigation("Up");
+            }
+            function onLeftStickDown() {
+                window.handleGamepadNavigation("Down");
+            }
+            function onLeftStickLeft() {
+                window.handleGamepadNavigation("Left");
+            }
+            function onLeftStickRight() {
+                window.handleGamepadNavigation("Right");
+            }
+
+            function onLeftShoulder() {
+                if (audioEngine.position > 2.0) {
+                    audioEngine.setPosition(0.0);
+                } else {
+                    if (window.currentQueueIndex > 0) {
+                        window.playTrackAtIndex(window.currentQueueIndex - 1);
+                    } else
+                        audioEngine.setPosition(0.0);
+                }
+            }
+            function onRightShoulder() {
+                if (window.currentQueueIndex >= 0 && window.currentQueueIndex < window.playbackQueue.length - 1) {
+                    window.playTrackAtIndex(window.currentQueueIndex + 1);
+                }
+            }
+        }
+
         // Queue Drawer
         Drawer {
             id: queueDrawer
             edge: Qt.RightEdge
             width: Math.min(window.width * 0.4, 400)
             height: parent.height
+
+            onOpened: queueListView.forceActiveFocus()
+
             background: Rectangle {
                 color: "#18181c"
                 border.color: "#33333b"
@@ -978,11 +1216,18 @@ ApplicationWindow {
                 }
 
                 ListView {
+                    id: queueListView
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     clip: true
                     model: window.playbackQueue
                     cacheBuffer: 1000
+                    focus: true
+
+                    Keys.onReturnPressed: if (currentItem)
+                        currentItem.triggerAction()
+                    Keys.onSpacePressed: if (currentItem)
+                        currentItem.triggerAction()
 
                     add: Transition {
                         NumberAnimation {
@@ -1027,10 +1272,12 @@ ApplicationWindow {
                             }
                         }
 
-                        // Highlight current playing song
+                        // Highlight current playing song and focus
                         background: Rectangle {
-                            color: index === window.currentQueueIndex ? "#2a2a35" : (parent.hovered ? "#22222b" : "transparent")
+                            color: queueListView.isCurrentItem && (queueListView.activeFocus || parent.activeFocus) ? "#333344" : (index === window.currentQueueIndex ? "#2a2a35" : (parent.hovered ? "#22222b" : "transparent"))
                             radius: 6
+                            border.color: queueListView.isCurrentItem && (queueListView.activeFocus || parent.activeFocus) ? "#ffffff" : "transparent"
+                            border.width: queueListView.isCurrentItem && (queueListView.activeFocus || parent.activeFocus) ? 2 : 0
 
                             Behavior on color {
                                 ColorAnimation {
@@ -1084,8 +1331,13 @@ ApplicationWindow {
                             }
                         }
 
-                        onClicked: {
+                        function triggerAction() {
                             window.playTrackAtIndex(index);
+                        }
+
+                        onClicked: {
+                            queueListView.currentIndex = index;
+                            triggerAction();
                         }
                     }
                 }

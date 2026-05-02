@@ -60,6 +60,7 @@ Item {
                             return audioEngine.equalizer ? audioEngine.equalizer.bandGain(index) : 0
                         }
                         enabled: audioEngine.equalizer ? audioEngine.equalizer.enabled : false
+                        focusPolicy: Qt.NoFocus
                         onMoved: {
                             if (audioEngine.equalizer) {
                                 audioEngine.equalizer.setBandGain(index, value)

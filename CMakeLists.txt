@@ -16,12 +16,14 @@ find_package(Qt5 COMPONENTS Core Gui Widgets Qml Quick Sql Concurrent Network RE
 # Find TagLib
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(TAGLIB REQUIRED taglib)
+pkg_check_modules(SDL2 REQUIRED sdl2)
 
 # Include directories
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party
     ${TAGLIB_INCLUDE_DIRS}
+    ${SDL2_INCLUDE_DIRS}
 )
 
 # Source files
@@ -38,6 +40,8 @@ set(SOURCES
     include/track_model.h
     src/cover_art_provider.cpp
     include/cover_art_provider.h
+    src/gamepad_controller.cpp
+    include/gamepad_controller.h
 )
 
 # QML Resources
@@ -53,6 +57,7 @@ add_executable(MusicPlayer
 target_link_libraries(MusicPlayer PRIVATE
     Qt5::Core Qt5::Gui Qt5::Widgets Qt5::Qml Qt5::Quick Qt5::Sql Qt5::Concurrent Qt5::Network
     ${TAGLIB_LIBRARIES}
+    ${SDL2_LIBRARIES}
     dl pthread m
 )
 

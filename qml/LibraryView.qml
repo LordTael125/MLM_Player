@@ -23,6 +23,15 @@ Item {
         if (mainStack.depth > 1) {
             mainStack.pop();
             libraryView.activeCategoryName = libraryView.categoryContext;
+            forceActiveContentFocus();
+        }
+    }
+
+    function forceActiveContentFocus() {
+        if (isSidebarVisible) {
+            filterListView.forceActiveFocus();
+        } else if (mainStack.currentItem && typeof mainStack.currentItem.forceContentFocus === "function") {
+            mainStack.currentItem.forceContentFocus();
         }
     }
 
@@ -32,6 +41,11 @@ Item {
         } else {
             isListview = true;
         }
+    }
+
+    function toggleSidebar() {
+        isSidebarVisible = !isSidebarVisible;
+        forceActiveContentFocus();
     }
 
     RowLayout {
@@ -69,39 +83,35 @@ Item {
                     Layout.bottomMargin: 10
                 }
 
-                Repeater {
+                ListView {
+                    id: filterListView
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
+                    focus: true
+                    
+                    Keys.onReturnPressed: if (currentItem) currentItem.triggerAction()
+                    Keys.onSpacePressed: if (currentItem) currentItem.triggerAction()
+
                     model: [
-                        {
-                            name: "Tracks",
-                            ctx: "All Tracks"
-                        },
-                        {
-                            name: "Artists",
-                            ctx: "Artists"
-                        },
-                        {
-                            name: "Albums",
-                            ctx: "Albums"
-                        },
-                        {
-                            name: "Folders",
-                            ctx: "Folders"
-                        },
-                        {
-                            name: "Collections",
-                            ctx: "Collections"
-                        }
+                        { name: "Tracks", ctx: "All Tracks" },
+                        { name: "Artists", ctx: "Artists" },
+                        { name: "Albums", ctx: "Albums" },
+                        { name: "Folders", ctx: "Folders" },
+                        { name: "Collections", ctx: "Collections" }
                     ]
 
                     delegate: ItemDelegate {
-                        Layout.fillWidth: true
+                        width: ListView.view.width
                         height: 50
                         hoverEnabled: true
 
                         property bool isActive: libraryView.categoryContext === modelData.ctx
 
                         background: Rectangle {
-                            color: parent.isActive ? "#2a2a35" : (parent.hovered ? "#22222b" : "transparent")
+                            color: filterListView.isCurrentItem && (filterListView.activeFocus || parent.activeFocus) ? "#333344" : (parent.isActive ? "#2a2a35" : (parent.hovered ? "#22222b" : "transparent"))
+                            border.color: filterListView.isCurrentItem && (filterListView.activeFocus || parent.activeFocus) ? "#ffffff" : "transparent"
+                            border.width: filterListView.isCurrentItem && (filterListView.activeFocus || parent.activeFocus) ? 2 : 0
 
                             // Left accent bar for active tab
                             Rectangle {
@@ -122,7 +132,7 @@ Item {
                             leftPadding: 20
                         }
 
-                        onClicked: {
+                        function triggerAction() {
                             libraryView.activeCategoryName = modelData.name === "Tracks" ? "All Tracks" : modelData.name;
                             libraryView.categoryContext = modelData.ctx;
                             if (modelData.name === "Tracks")
@@ -131,6 +141,14 @@ Item {
                             mainStack.push(unifiedCategoryView, {
                                 categoryType: modelData.name
                             });
+                            // Return focus to grid
+                            var view = mainStack.currentItem;
+                            if (view) view.forceActiveFocus();
+                        }
+
+                        onClicked: {
+                            filterListView.currentIndex = index;
+                            triggerAction();
                         }
                     }
                 }
@@ -159,7 +177,7 @@ Item {
                     ToolButton {
                         icon.source: libraryView.isSidebarVisible ? "qrc:/qml/icons/panel_close.svg" : "qrc:/qml/icons/panel_open.svg"
                         icon.color: "white"
-                        onClicked: libraryView.isSidebarVisible = !libraryView.isSidebarVisible
+                        onClicked: libraryView.toggleSidebar()
                     }
 
                     ToolButton {
@@ -225,19 +243,32 @@ Item {
                 return trackModel;
             }
 
+            function forceContentFocus() {
+                if (contentLoader.item) {
+                    contentLoader.item.forceActiveFocus();
+                }
+            }
+
             Loader {
+                id: contentLoader
                 anchors.fill: parent
                 sourceComponent: libraryView.isListview ? listComp : gridComp
+                onLoaded: item.forceActiveFocus()
             }
 
             Component {
                 id: gridComp
                 GridView {
+                    id: gridView
                     model: categoryContainer.activeModel
                     cellWidth: categoryContainer.categoryType === "Tracks" ? 160 : 180
                     cellHeight: categoryContainer.categoryType === "Tracks" ? 200 : 220
                     clip: true
                     cacheBuffer: 1000
+                    focus: true
+                    
+                    Keys.onReturnPressed: if (currentItem) currentItem.triggerAction()
+                    Keys.onSpacePressed: if (currentItem) currentItem.triggerAction()
 
                     delegate: Item {
                         width: categoryContainer.categoryType === "Tracks" ? 160 : 180
@@ -257,13 +288,38 @@ Item {
                         property string dPath: isTrack ? model.filePath : (modelData.filePath || "")
                         property bool dHasCoverArt: isTrack ? model.hasCoverArt : (modelData.hasCoverArt !== undefined ? modelData.hasCoverArt : false)
 
+                        function triggerAction() {
+                            if (isTrack) {
+                                if (window.currentPlayingPath === dPath) {
+                                    if (audioEngine.isPlaying) audioEngine.pause();
+                                    else audioEngine.play();
+                                } else {
+                                    window.playTrackAtIndex(index, libraryView.activeCategoryName);
+                                }
+                            } else {
+                                libraryView.activeCategoryName = modelData.name;
+                                if (categoryContainer.categoryType === "Albums")
+                                    trackModel.filterByAlbum(modelData.name);
+                                else if (categoryContainer.categoryType === "Artists")
+                                    trackModel.filterByArtist(modelData.name);
+                                else if (categoryContainer.categoryType === "Folders")
+                                    trackModel.filterByFolder(modelData.path);
+                                else if (categoryContainer.categoryType === "Collections")
+                                    trackModel.filterByCollection(modelData.name);
+
+                                mainStack.push(unifiedCategoryView, {
+                                    categoryType: "Tracks"
+                                });
+                            }
+                        }
+
                         Rectangle {
                             anchors.fill: parent
                             anchors.margins: 10
-                            color: (isTrack && window.currentPlayingPath === dPath) ? "#2a2a35" : "#202025"
+                            color: GridView.isCurrentItem && (gridView.activeFocus || parent.activeFocus) ? "#333344" : ((isTrack && window.currentPlayingPath === dPath) ? "#2a2a35" : "#202025")
                             radius: 8
-                            border.color: (isTrack && window.currentPlayingPath === dPath) ? "#0078d7" : "transparent"
-                            border.width: (isTrack && window.currentPlayingPath === dPath) ? 2 : 0
+                            border.color: GridView.isCurrentItem && (gridView.activeFocus || parent.activeFocus) ? "#ffffff" : ((isTrack && window.currentPlayingPath === dPath) ? "#0078d7" : "transparent")
+                            border.width: (GridView.isCurrentItem && (gridView.activeFocus || parent.activeFocus)) ? 2 : ((isTrack && window.currentPlayingPath === dPath) ? 2 : 0)
 
                             Rectangle {
                                 id: artRect
@@ -325,23 +381,8 @@ Item {
                             MouseArea {
                                 anchors.fill: parent
                                 onClicked: {
-                                    if (isTrack) {
-                                        window.playTrackAtIndex(index, libraryView.activeCategoryName);
-                                    } else {
-                                        libraryView.activeCategoryName = modelData.name;
-                                        if (categoryContainer.categoryType === "Albums")
-                                            trackModel.filterByAlbum(modelData.name);
-                                        else if (categoryContainer.categoryType === "Artists")
-                                            trackModel.filterByArtist(modelData.name);
-                                        else if (categoryContainer.categoryType === "Folders")
-                                            trackModel.filterByFolder(modelData.path);
-                                        else if (categoryContainer.categoryType === "Collections")
-                                            trackModel.filterByCollection(modelData.name);
-
-                                        mainStack.push(unifiedCategoryView, {
-                                            categoryType: "Tracks"
-                                        });
-                                    }
+                                    gridView.currentIndex = index;
+                                    triggerAction();
                                 }
                             }
                         }
@@ -352,9 +393,14 @@ Item {
             Component {
                 id: listComp
                 ListView {
+                    id: listView
                     model: categoryContainer.activeModel
                     clip: true
                     cacheBuffer: 1000
+                    focus: true
+                    
+                    Keys.onReturnPressed: if (currentItem) currentItem.triggerAction()
+                    Keys.onSpacePressed: if (currentItem) currentItem.triggerAction()
 
                     delegate: Item {
                         width: ListView.view.width
@@ -374,12 +420,37 @@ Item {
                         property string dPath: isTrack ? model.filePath : (modelData.filePath || "")
                         property bool dHasCoverArt: isTrack ? model.hasCoverArt : (modelData.hasCoverArt !== undefined ? modelData.hasCoverArt : false)
 
+                        function triggerAction() {
+                            if (isTrack) {
+                                if (window.currentPlayingPath === dPath) {
+                                    if (audioEngine.isPlaying) audioEngine.pause();
+                                    else audioEngine.play();
+                                } else {
+                                    window.playTrackAtIndex(index, libraryView.activeCategoryName);
+                                }
+                            } else {
+                                libraryView.activeCategoryName = modelData.name;
+                                if (categoryContainer.categoryType === "Albums")
+                                    trackModel.filterByAlbum(modelData.name);
+                                else if (categoryContainer.categoryType === "Artists")
+                                    trackModel.filterByArtist(modelData.name);
+                                else if (categoryContainer.categoryType === "Folders")
+                                    trackModel.filterByFolder(modelData.path);
+                                else if (categoryContainer.categoryType === "Collections")
+                                    trackModel.filterByCollection(modelData.name);
+
+                                mainStack.push(unifiedCategoryView, {
+                                    categoryType: "Tracks"
+                                });
+                            }
+                        }
+
                         Rectangle {
                             anchors.fill: parent
                             anchors.margins: 2
-                            color: (isTrack && window.currentPlayingPath === dPath) ? "#2a2a35" : (hoverArea.containsMouse ? "#22222b" : "transparent")
-                            border.color: (isTrack && window.currentPlayingPath === dPath) ? "#0078d7" : "transparent"
-                            border.width: (isTrack && window.currentPlayingPath === dPath) ? 2 : 0
+                            color: ListView.isCurrentItem && (listView.activeFocus || parent.activeFocus) ? "#333344" : ((isTrack && window.currentPlayingPath === dPath) ? "#2a2a35" : (hoverArea.containsMouse ? "#22222b" : "transparent"))
+                            border.color: ListView.isCurrentItem && (listView.activeFocus || parent.activeFocus) ? "#ffffff" : ((isTrack && window.currentPlayingPath === dPath) ? "#0078d7" : "transparent")
+                            border.width: (ListView.isCurrentItem && (listView.activeFocus || parent.activeFocus)) ? 2 : ((isTrack && window.currentPlayingPath === dPath) ? 2 : 0)
                             radius: 6
 
                             Rectangle {
@@ -444,23 +515,8 @@ Item {
                                 anchors.fill: parent
                                 hoverEnabled: true
                                 onClicked: {
-                                    if (isTrack) {
-                                        window.playTrackAtIndex(index, libraryView.activeCategoryName);
-                                    } else {
-                                        libraryView.activeCategoryName = modelData.name;
-                                        if (categoryContainer.categoryType === "Albums")
-                                            trackModel.filterByAlbum(modelData.name);
-                                        else if (categoryContainer.categoryType === "Artists")
-                                            trackModel.filterByArtist(modelData.name);
-                                        else if (categoryContainer.categoryType === "Folders")
-                                            trackModel.filterByFolder(modelData.path);
-                                        else if (categoryContainer.categoryType === "Collections")
-                                            trackModel.filterByCollection(modelData.name);
-
-                                        mainStack.push(unifiedCategoryView, {
-                                            categoryType: "Tracks"
-                                        });
-                                    }
+                                    listView.currentIndex = index;
+                                    triggerAction();
                                 }
                             }
                         }

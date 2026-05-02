@@ -8,7 +8,8 @@ Item {
 
     // Format helper function
     function formatTime(seconds) {
-        if (!seconds || isNaN(seconds)) return "00:00";
+        if (!seconds || isNaN(seconds))
+            return "00:00";
         let m = Math.floor(seconds / 60);
         let s = Math.floor(seconds % 60);
         return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
@@ -43,7 +44,8 @@ Item {
 
     // Drag capability across the entire minimal view empty zones!
     DragHandler {
-        onActiveChanged: if (active) window.startSystemMove()
+        onActiveChanged: if (active)
+            window.startSystemMove()
     }
 
     RowLayout {
@@ -65,7 +67,7 @@ Item {
 
             Image {
                 anchors.fill: parent
-                source: window.currentPlayingPath !== "" ? "image://musiccover/" + window.currentPlayingPath : "qrc:/qml/icons/music.svg"
+                source: "image://musiccover/" + window.currentPlayingPath
                 fillMode: Image.PreserveAspectCrop
                 asynchronous: true
                 sourceSize: Qt.size(300, 300)
@@ -78,9 +80,11 @@ Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
             spacing: 12
-            
-            Item { Layout.fillHeight: true } // top spacer
-            
+
+            Item {
+                Layout.fillHeight: true
+            } // top spacer
+
             Text {
                 text: window.currentPlayingTitle
                 color: "white"
@@ -103,35 +107,38 @@ Item {
                 color: "#777"
                 font.pixelSize: 15
             }
-            
-            Item { Layout.preferredHeight: 15 } // Visual separation
-            
+
+            Item {
+                Layout.preferredHeight: 15
+            } // Visual separation
+
             // Progress Bar
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 15
-                
+
                 Text {
                     text: minimalRoot.formatTime(audioEngine.position)
                     color: "#888"
                     font.pixelSize: 12
                 }
-                
+
                 Slider {
                     Layout.fillWidth: true
                     from: 0
                     to: audioEngine.duration
                     value: audioEngine.position
+                    focusPolicy: Qt.NoFocus
                     onMoved: audioEngine.position = value
                 }
-                
+
                 Text {
                     text: minimalRoot.formatTime(audioEngine.duration)
                     color: "#888"
                     font.pixelSize: 12
                 }
             }
-            
+
             // Playback Controls Row
             RowLayout {
                 Layout.fillWidth: true
@@ -144,9 +151,11 @@ Item {
                     width: 40
                     height: 40
                     onClicked: window.repeatMode = (window.repeatMode + 1) % 3
-                    background: Rectangle { color: "transparent" }
+                    background: Rectangle {
+                        color: "transparent"
+                    }
                 }
-                
+
                 RoundButton {
                     icon.source: "qrc:/qml/icons/prev.svg"
                     icon.color: "white"
@@ -155,18 +164,20 @@ Item {
                     height: 48
                     onClicked: {
                         if (audioEngine.position > 2.0) {
-                            audioEngine.setPosition(0.0)
+                            audioEngine.setPosition(0.0);
                         } else {
                             if (window.currentQueueIndex > 0) {
-                                window.playTrackAtIndex(window.currentQueueIndex - 1)
+                                window.playTrackAtIndex(window.currentQueueIndex - 1);
                             } else {
-                                audioEngine.setPosition(0.0)
+                                audioEngine.setPosition(0.0);
                             }
                         }
                     }
-                    background: Rectangle { color: "transparent" }
+                    background: Rectangle {
+                        color: "transparent"
+                    }
                 }
-                
+
                 RoundButton {
                     icon.source: audioEngine.isPlaying ? "qrc:/qml/icons/pause.svg" : "qrc:/qml/icons/play.svg"
                     icon.color: "white"
@@ -174,10 +185,14 @@ Item {
                     width: 56
                     height: 56
                     onClicked: {
-                        if (audioEngine.isPlaying) audioEngine.pause()
-                        else audioEngine.play()
+                        if (audioEngine.isPlaying)
+                            audioEngine.pause();
+                        else
+                            audioEngine.play();
                     }
-                    background: Rectangle { color: "transparent" }
+                    background: Rectangle {
+                        color: "transparent"
+                    }
                 }
 
                 RoundButton {
@@ -188,13 +203,17 @@ Item {
                     height: 48
                     onClicked: {
                         if (window.currentQueueIndex >= 0 && window.currentQueueIndex < window.playbackQueue.length - 1) {
-                            window.playTrackAtIndex(window.currentQueueIndex + 1)
+                            window.playTrackAtIndex(window.currentQueueIndex + 1);
                         }
                     }
-                    background: Rectangle { color: "transparent" }
+                    background: Rectangle {
+                        color: "transparent"
+                    }
                 }
 
-                Item { Layout.fillWidth: true } // Spacer pushes tools rightwards
+                Item {
+                    Layout.fillWidth: true
+                } // Spacer pushes tools rightwards
 
                 ToolButton {
                     icon.source: audioEngine.volume === 0.0 ? "qrc:/qml/icons/volume_off.svg" : "qrc:/qml/icons/volume.svg"
@@ -215,7 +234,9 @@ Item {
                 }
             }
 
-            Item { Layout.fillHeight: true } // bottom spacer
+            Item {
+                Layout.fillHeight: true
+            } // bottom spacer
         }
     }
 }

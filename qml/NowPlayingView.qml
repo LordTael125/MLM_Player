@@ -185,6 +185,7 @@ Item {
                     from: 0
                     to: audioEngine.duration
                     value: audioEngine.position
+                    focusPolicy: Qt.NoFocus
                     onMoved: audioEngine.position = value
                 }
                 
