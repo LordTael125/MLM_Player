@@ -9,7 +9,7 @@ import QtGraphicalEffects 1.15
 
 ApplicationWindow {
     id: window
-    width: launchMode === "Library" ? 1260 : 700
+    width: launchMode === "Library" ? 1260 : 800
     height: launchMode === "Library" ? 768 : 350
     visible: true
     visibility: launchMode === "Library" ? Window.Maximized : Window.Windowed
@@ -25,7 +25,7 @@ ApplicationWindow {
     property string currentPlayingTitle: "No Song Playing"
     property string currentPlayingArtist: ""
     property string currentPlayingPath: ""
-    property string applicationVersion: "1.3-Alpha"
+    property string applicationVersion: "1.3-beta"
     property bool currentPlayingHasCoverArt: false
     property var playbackQueue: []
     property int currentQueueIndex: -1
@@ -87,66 +87,21 @@ ApplicationWindow {
         }
     }
 
-    function handleGamepadNavigation(dir) {
-        var item = window.activeFocusItem;
+    GamepadControl {
+        id: globalGamepadManager
+        window: window
 
-        // Resolve the actual list/grid view if the focused item is a delegate
-        if (item && typeof item.moveCurrentIndexUp !== "function") {
-            if (item.GridView && item.GridView.view)
-                item = item.GridView.view;
-            else if (item.ListView && item.ListView.view)
-                item = item.ListView.view;
-        }
-
-        var navigated = false;
-
-        console.log("Gamepad Navigation Dir:", dir, "ActiveFocusItem:", item);
-
-        if (item) {
-            if (dir === "Up") {
-                if (typeof item.moveCurrentIndexUp === "function") {
-                    item.moveCurrentIndexUp();
-                    navigated = true;
-                } else if (typeof item.decrementCurrentIndex === "function") {
-                    item.decrementCurrentIndex();
-                    navigated = true;
-                }
-            } else if (dir === "Down") {
-                if (typeof item.moveCurrentIndexDown === "function") {
-                    item.moveCurrentIndexDown();
-                    navigated = true;
-                } else if (typeof item.incrementCurrentIndex === "function") {
-                    item.incrementCurrentIndex();
-                    navigated = true;
-                }
-            } else if (dir === "Left") {
-                if (typeof item.moveCurrentIndexLeft === "function") {
-                    item.moveCurrentIndexLeft();
-                    navigated = true;
-                } else if (typeof item.decrementCurrentIndex === "function" && item.orientation === ListView.Horizontal) {
-                    item.decrementCurrentIndex();
-                    navigated = true;
-                }
-            } else if (dir === "Right") {
-                if (typeof item.moveCurrentIndexRight === "function") {
-                    item.moveCurrentIndexRight();
-                    navigated = true;
-                } else if (typeof item.incrementCurrentIndex === "function" && item.orientation === ListView.Horizontal) {
-                    item.incrementCurrentIndex();
-                    navigated = true;
-                }
-            }
-        }
-
-        if (!navigated) {
-            if (nowPlayingPopup.opened) {
-                // No grid in now playing
-            } else if (queueDrawer.opened) {
-                queueListView.forceActiveFocus();
-            } else if (launchMode === "Library") {
-                libraryViewMain.forceActiveContentFocus();
-            }
-        }
+        libraryViewMain: libraryViewMain
+        queueListView: queueListView
+        queueDrawer: queueDrawer
+        nowPlayingPopup: nowPlayingPopup
+        eqPopup: eqPopup
+        shortcutsPopup: shortcutsPopup
+        supportPopup: supportPopup
+        mainMenuPopup: mainMenuPopup
+        volumePopup: volumePopup
+        playbackBar: playbackBar
+        volumeOSDPopup: volumeOSDPopup
     }
 
     Settings {
@@ -258,6 +213,10 @@ ApplicationWindow {
 
         audioEngine.loadFile(track.filePath);
         audioEngine.play();
+
+        if (queueListView) {
+            queueListView.positionViewAtIndex(currentQueueIndex, ListView.Beginning);
+        }
     }
 
     function showVolumePopup(callerItem) {
@@ -513,7 +472,7 @@ ApplicationWindow {
                 }
 
                 ToolButton {
-                    icon.source: "qrc:/qml/icons/maximize.svg"
+                    icon.source: window.visibility === Window.Maximized ? "qrc:/qml/icons/unmaximize.svg" : "qrc:/qml/icons/maximize.svg"
                     icon.color: "white"
                     display: AbstractButton.IconOnly
                     Layout.preferredWidth: 30
@@ -545,6 +504,7 @@ ApplicationWindow {
 
             LibraryView {
                 id: libraryViewMain
+                gamepadManager: globalGamepadManager
                 anchors.fill: parent
                 onMenuClicked: mainMenuPopup.open()
             }
@@ -566,6 +526,7 @@ ApplicationWindow {
             x: window.width - width - 15
             y: 45
             width: 220
+            height: menuLayout.implicitHeight + topPadding + bottomPadding
             padding: 5
             background: Rectangle {
                 color: "#18181c"
@@ -574,147 +535,237 @@ ApplicationWindow {
             }
             closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
 
-            ColumnLayout {
-                anchors.fill: parent
-                spacing: 2
+            property alias menuList: menuWrapper
 
-                Button {
-                    Layout.fillWidth: true
-                    text: "Toggle Fullscreen"
-                    contentItem: Text {
-                        text: parent.text
-                        color: "white"
-                        font.pixelSize: 15
-                        verticalAlignment: Text.AlignVCenter
-                        leftPadding: 15
-                        topPadding: 8
-                        bottomPadding: 8
+            onOpened: {
+                globalGamepadManager.currentZone = "MainMenu";
+                menuWrapper.forceActiveFocus();
+            }
+            onClosed: {
+                globalGamepadManager.currentZone = launchMode === "Library" ? (libraryViewMain.isSidebarVisible ? "LibrarySidebar" : "LibraryGrid") : "NowPlaying";
+            }
+
+            Item {
+                id: menuWrapper
+                anchors.fill: parent
+
+                property int currentIndex: 0
+
+                // We dynamically filter out invisible children (like Exit in fullscreen)
+                property var visibleChildren: {
+                    var arr = [];
+                    for (var i = 0; i < menuLayout.children.length; i++) {
+                        if (menuLayout.children[i].visible)
+                            arr.push(menuLayout.children[i]);
                     }
-                    background: Rectangle {
-                        color: parent.hovered ? "#2a2a35" : "transparent"
-                        radius: 4
-                    }
-                    onClicked: {
-                        mainMenuPopup.close();
-                        toggleFullScreen();
-                    }
+                    return arr;
                 }
-                Button {
-                    Layout.fillWidth: true
-                    text: "Scan Directory"
-                    contentItem: Text {
-                        text: parent.text
-                        color: "white"
-                        font.pixelSize: 15
-                        verticalAlignment: Text.AlignVCenter
-                        leftPadding: 15
-                        topPadding: 8
-                        bottomPadding: 8
-                    }
-                    background: Rectangle {
-                        color: parent.hovered ? "#2a2a35" : "transparent"
-                        radius: 4
-                    }
-                    onClicked: {
-                        mainMenuPopup.close();
-                        folderDialog.open();
-                    }
+
+                function decrementCurrentIndex() {
+                    if (currentIndex > 0)
+                        currentIndex--;
                 }
-                Button {
-                    Layout.fillWidth: true
-                    text: "Clear Database"
-                    contentItem: Text {
-                        text: parent.text
-                        color: "white"
-                        font.pixelSize: 15
-                        verticalAlignment: Text.AlignVCenter
-                        leftPadding: 15
-                        topPadding: 8
-                        bottomPadding: 8
-                    }
-                    background: Rectangle {
-                        color: parent.hovered ? "#2a2a35" : "transparent"
-                        radius: 4
-                    }
-                    onClicked: {
-                        mainMenuPopup.close();
-                        libraryScanner.clearDatabase();
-                        window.playbackQueue = [];
-                        window.currentQueueIndex = -1;
-                        window.currentPlayingTitle = "No Song Playing";
-                        window.currentPlayingArtist = "";
-                        window.currentPlayingPath = "";
-                        audioEngine.stop();
-                    }
+                function incrementCurrentIndex() {
+                    if (currentIndex < visibleChildren.length - 1)
+                        currentIndex++;
                 }
+
+                property var currentItem: visibleChildren.length > 0 ? visibleChildren[currentIndex] : null
+
                 Rectangle {
-                    Layout.fillWidth: true
-                    height: 1
-                    color: "#33333b"
-                }
-                Button {
-                    Layout.fillWidth: true
-                    text: "Keyboard Shortcuts"
-                    contentItem: Text {
-                        text: parent.text
-                        color: "#0078d7"
-                        font.bold: true
-                        font.pixelSize: 15
-                        verticalAlignment: Text.AlignVCenter
-                        leftPadding: 15
-                        topPadding: 8
-                        bottomPadding: 8
+                    color: (globalGamepadManager && globalGamepadManager.controllerConnected && globalGamepadManager.currentZone === "MainMenu") ? "#1AFFFFFF" : "transparent"
+                    opacity: 1.0
+                    radius: 4
+                    border.color: (globalGamepadManager && globalGamepadManager.controllerConnected && globalGamepadManager.currentZone === "MainMenu") ? "#ffffff" : "transparent"
+                    border.width: (globalGamepadManager && globalGamepadManager.controllerConnected && globalGamepadManager.currentZone === "MainMenu") ? 2 : 0
+                    z: 2
+
+                    property var targetItem: menuWrapper.currentItem
+
+                    x: targetItem ? targetItem.x + menuLayout.x : 0
+                    y: targetItem ? targetItem.y + menuLayout.y : 0
+                    width: targetItem ? targetItem.width : 0
+                    height: targetItem ? targetItem.height : 0
+
+                    Behavior on y {
+                        SpringAnimation {
+                            spring: 3
+                            damping: 0.2
+                        }
                     }
-                    background: Rectangle {
-                        color: parent.hovered ? "#2a2a35" : "transparent"
-                        radius: 4
-                    }
-                    onClicked: {
-                        mainMenuPopup.close();
-                        shortcutsPopup.open();
-                    }
-                }
-                Button {
-                    Layout.fillWidth: true
-                    text: "About Music Player"
-                    contentItem: Text {
-                        text: parent.text
-                        color: "white"
-                        font.pixelSize: 15
-                        verticalAlignment: Text.AlignVCenter
-                        leftPadding: 15
-                        topPadding: 8
-                        bottomPadding: 8
-                    }
-                    background: Rectangle {
-                        color: parent.hovered ? "#2a2a35" : "transparent"
-                        radius: 4
-                    }
-                    onClicked: {
-                        mainMenuPopup.close();
-                        supportPopup.open();
+                    Behavior on height {
+                        SpringAnimation {
+                            spring: 3
+                            damping: 0.2
+                        }
                     }
                 }
-                Button {
-                    visible: window.isFullScreen
-                    Layout.fillWidth: true
-                    text: "Exit"
-                    contentItem: Text {
-                        text: parent.text
-                        color: "white"
-                        font.pixelSize: 15
-                        verticalAlignment: Text.AlignVCenter
-                        leftPadding: 15
-                        topPadding: 8
-                        bottomPadding: 8
+
+                ColumnLayout {
+                    id: menuLayout
+                    anchors.fill: parent
+                    spacing: 2
+
+                    Button {
+                        Layout.fillWidth: true
+                        text: "Toggle Fullscreen"
+                        function triggerAction() {
+                            clicked();
+                        }
+                        contentItem: Text {
+                            text: parent.text
+                            color: "white"
+                            font.pixelSize: 15
+                            verticalAlignment: Text.AlignVCenter
+                            leftPadding: 15
+                            topPadding: 8
+                            bottomPadding: 8
+                        }
+                        background: Rectangle {
+                            color: parent.hovered ? "#2a2a35" : "transparent"
+                            radius: 4
+                        }
+                        onClicked: {
+                            mainMenuPopup.close();
+                            toggleFullScreen();
+                        }
                     }
-                    background: Rectangle {
-                        color: parent.hovered ? "#2a2a35" : "transparent"
-                        radius: 4
+
+                    Button {
+                        Layout.fillWidth: true
+                        text: "Scan Directory"
+                        function triggerAction() {
+                            clicked();
+                        }
+                        contentItem: Text {
+                            text: parent.text
+                            color: "white"
+                            font.pixelSize: 15
+                            verticalAlignment: Text.AlignVCenter
+                            leftPadding: 15
+                            topPadding: 8
+                            bottomPadding: 8
+                        }
+                        background: Rectangle {
+                            color: parent.hovered ? "#2a2a35" : "transparent"
+                            radius: 4
+                        }
+                        onClicked: {
+                            mainMenuPopup.close();
+                            folderDialog.open();
+                        }
                     }
-                    onClicked: {
-                        mainMenuPopup.close();
-                        window.close();
+
+                    Button {
+                        Layout.fillWidth: true
+                        text: "Clear Database"
+                        function triggerAction() {
+                            clicked();
+                        }
+                        contentItem: Text {
+                            text: parent.text
+                            color: "white"
+                            font.pixelSize: 15
+                            verticalAlignment: Text.AlignVCenter
+                            leftPadding: 15
+                            topPadding: 8
+                            bottomPadding: 8
+                        }
+                        background: Rectangle {
+                            color: parent.hovered ? "#2a2a35" : "transparent"
+                            radius: 4
+                        }
+                        onClicked: {
+                            mainMenuPopup.close();
+                            libraryScanner.clearDatabase();
+                            window.playbackQueue = [];
+                            window.currentQueueIndex = -1;
+                            window.currentPlayingTitle = "No Song Playing";
+                            window.currentPlayingArtist = "";
+                            window.currentPlayingPath = "";
+                            audioEngine.stop();
+                        }
+                    }
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 1
+                        color: "#33333b"
+                    }
+                    Button {
+                        Layout.fillWidth: true
+                        text: "Keyboard Shortcuts"
+                        function triggerAction() {
+                            clicked();
+                        }
+                        contentItem: Text {
+                            text: parent.text
+                            color: "#0078d7"
+                            font.bold: true
+                            font.pixelSize: 15
+                            verticalAlignment: Text.AlignVCenter
+                            leftPadding: 15
+                            topPadding: 8
+                            bottomPadding: 8
+                        }
+                        background: Rectangle {
+                            color: parent.hovered ? "#2a2a35" : "transparent"
+                            radius: 4
+                        }
+                        onClicked: {
+                            mainMenuPopup.close();
+                            shortcutsPopup.open();
+                        }
+                    }
+
+                    Button {
+                        Layout.fillWidth: true
+                        text: "About Music Player"
+                        function triggerAction() {
+                            clicked();
+                        }
+                        contentItem: Text {
+                            text: parent.text
+                            color: "white"
+                            font.pixelSize: 15
+                            verticalAlignment: Text.AlignVCenter
+                            leftPadding: 15
+                            topPadding: 8
+                            bottomPadding: 8
+                        }
+                        background: Rectangle {
+                            color: parent.hovered ? "#2a2a35" : "transparent"
+                            radius: 4
+                        }
+                        onClicked: {
+                            mainMenuPopup.close();
+                            supportPopup.open();
+                        }
+                    }
+
+                    Button {
+                        visible: window.isFullScreen || globalGamepadManager.controllerConnected
+                        Layout.fillWidth: true
+                        text: "Exit"
+                        function triggerAction() {
+                            clicked();
+                        }
+                        contentItem: Text {
+                            text: parent.text
+                            color: "white"
+                            font.pixelSize: 15
+                            verticalAlignment: Text.AlignVCenter
+                            leftPadding: 15
+                            topPadding: 8
+                            bottomPadding: 8
+                        }
+                        background: Rectangle {
+                            color: parent.hovered ? "#2a2a35" : "transparent"
+                            radius: 4
+                        }
+                        onClicked: {
+                            mainMenuPopup.close();
+                            window.close();
+                        }
                     }
                 }
             }
@@ -757,6 +808,15 @@ ApplicationWindow {
             }
             closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
 
+            onOpened: volumeCloseTimer.start()
+            onClosed: volumeCloseTimer.stop()
+
+            Timer {
+                id: volumeCloseTimer
+                interval: 3000
+                onTriggered: volumePopup.close()
+            }
+
             Slider {
                 anchors.centerIn: parent
                 height: 160
@@ -765,7 +825,10 @@ ApplicationWindow {
                 to: 1.0
                 value: audioEngine.volume
                 focusPolicy: Qt.NoFocus
-                onMoved: audioEngine.volume = value
+                onMoved: {
+                    audioEngine.volume = value;
+                    volumeCloseTimer.restart();
+                }
             }
         }
 
@@ -784,7 +847,16 @@ ApplicationWindow {
             }
             closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
 
+            property alias controlsList: npView.controlsList
+
+            onOpened: {
+                globalGamepadManager.currentZone = "NowPlaying";
+                controlsList.forceActiveFocus();
+            }
+            onClosed: globalGamepadManager.currentZone = launchMode === "Library" ? (libraryViewMain.isSidebarVisible ? "LibrarySidebar" : "LibraryGrid") : "NowPlaying"
+
             NowPlayingView {
+                id: npView
                 anchors.fill: parent
             }
         }
@@ -1095,99 +1167,6 @@ ApplicationWindow {
             }
         }
 
-        Connections {
-            target: gamepad
-
-            function onButtonB() {
-                if (nowPlayingPopup.opened)
-                    nowPlayingPopup.close();
-                else if (queueDrawer.opened)
-                    queueDrawer.close();
-                else if (eqPopup.opened)
-                    eqPopup.close();
-                else if (shortcutsPopup.opened)
-                    shortcutsPopup.close();
-                else if (supportPopup.opened)
-                    supportPopup.close();
-                else if (mainMenuPopup.opened)
-                    mainMenuPopup.close();
-                else if (launchMode === "Library")
-                    libraryViewMain.goBack();
-                else if (volumePopup.opened)
-                    volumePopup.close();
-            }
-
-            function onButtonX() {
-                if (nowPlayingPopup.opened)
-                    nowPlayingPopup.close();
-                else
-                    nowPlayingPopup.open();
-            }
-
-            function onButtonY() {
-                if (launchMode === "Library") {
-                    libraryViewMain.toggleSidebar();
-                }
-            }
-
-            function onButtonStart() {
-                if (audioEngine.isPlaying)
-                    audioEngine.pause();
-                else
-                    audioEngine.play();
-            }
-
-            function onDpadUp() {
-                queueDrawer.visible = !queueDrawer.visible;
-            }
-
-            function onDpadDown() {
-                window.showVolumePopup(playbackBar);
-            }
-
-            function onTriggerLeft() {
-                audioEngine.setPosition(Math.max(0.0, audioEngine.position - 5.0));
-            }
-
-            function onTriggerRight() {
-                audioEngine.setPosition(Math.min(audioEngine.duration, audioEngine.position + 5.0));
-            }
-
-            function onVolumeChange(delta) {
-                audioEngine.volume = Math.max(0.0, Math.min(1.0, audioEngine.volume + delta));
-                volumeOSDPopup.show();
-            }
-
-            function onLeftStickUp() {
-                window.handleGamepadNavigation("Up");
-            }
-            function onLeftStickDown() {
-                window.handleGamepadNavigation("Down");
-            }
-            function onLeftStickLeft() {
-                window.handleGamepadNavigation("Left");
-            }
-            function onLeftStickRight() {
-                window.handleGamepadNavigation("Right");
-            }
-
-            function onLeftShoulder() {
-                if (audioEngine.position > 2.0) {
-                    audioEngine.setPosition(0.0);
-                } else {
-                    if (window.currentQueueIndex > 0) {
-                        window.playTrackAtIndex(window.currentQueueIndex - 1);
-                    } else
-                        audioEngine.setPosition(0.0);
-                }
-            }
-            function onRightShoulder() {
-                if (window.currentQueueIndex >= 0 && window.currentQueueIndex < window.playbackQueue.length - 1) {
-                    window.playTrackAtIndex(window.currentQueueIndex + 1);
-                }
-            }
-        }
-
         // Queue Drawer
         Drawer {
             id: queueDrawer
@@ -1195,7 +1174,13 @@ ApplicationWindow {
             width: Math.min(window.width * 0.4, 400)
             height: parent.height
 
-            onOpened: queueListView.forceActiveFocus()
+            onOpened: {
+                queueListView.forceActiveFocus();
+                globalGamepadManager.currentZone = "QueueDrawer";
+            }
+            onClosed: {
+                globalGamepadManager.currentZone = launchMode === "Library" ? (libraryViewMain.isSidebarVisible ? "LibrarySidebar" : "LibraryGrid") : "NowPlaying";
+            }
 
             background: Rectangle {
                 color: "#18181c"
@@ -1223,6 +1208,21 @@ ApplicationWindow {
                     model: window.playbackQueue
                     cacheBuffer: 1000
                     focus: true
+
+                    highlightFollowsCurrentItem: true
+                    highlight: Rectangle {
+                        color: (globalGamepadManager && globalGamepadManager.controllerConnected && globalGamepadManager.currentZone === "QueueDrawer") ? "#1AFFFFFF" : "transparent"
+                        radius: 6
+                        border.color: (globalGamepadManager && globalGamepadManager.controllerConnected && globalGamepadManager.currentZone === "QueueDrawer") ? "#ffffff" : "transparent"
+                        border.width: (globalGamepadManager && globalGamepadManager.controllerConnected && globalGamepadManager.currentZone === "QueueDrawer") ? 2 : 0
+                        z: 2
+                        Behavior on y {
+                            SpringAnimation {
+                                spring: 3
+                                damping: 0.2
+                            }
+                        }
+                    }
 
                     Keys.onReturnPressed: if (currentItem)
                         currentItem.triggerAction()
@@ -1252,13 +1252,14 @@ ApplicationWindow {
                     }
 
                     delegate: ItemDelegate {
+                        id: queueDelegate
                         width: ListView.view.width
 
-                        property bool isVisibleItem: index >= window.currentQueueIndex
+                        property bool isCurrentItem: ListView.isCurrentItem
 
-                        height: isVisibleItem ? 60 : 0
-                        opacity: isVisibleItem ? 1.0 : 0.0
-                        visible: height > 0 || opacity > 0
+                        height: 60
+                        opacity: 1.0
+                        visible: true
 
                         Behavior on height {
                             NumberAnimation {
@@ -1272,13 +1273,10 @@ ApplicationWindow {
                             }
                         }
 
-                        // Highlight current playing song and focus
+                        // Background for hover and current playing states
                         background: Rectangle {
-                            color: queueListView.isCurrentItem && (queueListView.activeFocus || parent.activeFocus) ? "#333344" : (index === window.currentQueueIndex ? "#2a2a35" : (parent.hovered ? "#22222b" : "transparent"))
+                            color: index === window.currentQueueIndex ? "#2a2a35" : (parent.hovered ? "#22222b" : "transparent")
                             radius: 6
-                            border.color: queueListView.isCurrentItem && (queueListView.activeFocus || parent.activeFocus) ? "#ffffff" : "transparent"
-                            border.width: queueListView.isCurrentItem && (queueListView.activeFocus || parent.activeFocus) ? 2 : 0
-
                             Behavior on color {
                                 ColorAnimation {
                                     duration: 250

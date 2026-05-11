@@ -13,7 +13,11 @@ public:
 
   Q_INVOKABLE void simulateKeyPress(int qtKey);
 
+  Q_PROPERTY(bool isConnected READ isConnected NOTIFY connectionChanged)
+  bool isConnected() const { return m_controller != nullptr; }
+
 signals:
+  void connectionChanged(bool connected);
   void buttonA();
   void buttonB();
   void buttonX();
@@ -62,10 +66,26 @@ private:
   bool m_axisY_negative = false;
   bool m_axisRX_positive = false;
   bool m_axisRX_negative = false;
+  bool m_axisRY_positive = false;
+  bool m_axisRY_negative = false;
 
   // Trigger tracking
   bool m_triggerL_down = false;
   bool m_triggerR_down = false;
+
+  // Continuous navigation tracking
+  enum NavDirection { 
+      NavNone, 
+      NavDpadUp, NavDpadDown, NavDpadLeft, NavDpadRight,
+      NavLStickUp, NavLStickDown, NavLStickLeft, NavLStickRight 
+  };
+  NavDirection m_navDirection = NavNone;
+  int m_navTicks = 0;
+  int m_navInterval = 0;
+
+  // Continuous trigger tracking
+  int m_triggerTicksL = 0;
+  int m_triggerTicksR = 0;
 };
 
 #endif // GAMEPAD_CONTROLLER_H

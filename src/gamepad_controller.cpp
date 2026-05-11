@@ -1,4 +1,5 @@
 #include "gamepad_controller.h"
+#include "SDL_gamecontroller.h"
 #include <QCoreApplication>
 #include <QDebug>
 #include <QGuiApplication>
@@ -6,6 +7,7 @@
 #include <QWindow>
 
 GamepadController::GamepadController(QObject *parent) : QObject(parent) {
+  SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
   if (SDL_Init(SDL_INIT_GAMECONTROLLER) < 0) {
     qWarning() << "SDL could not initialize! SDL_Error:" << SDL_GetError();
     return;
@@ -36,6 +38,7 @@ void GamepadController::handleDeviceAdded(int deviceIndex) {
     m_controller = SDL_GameControllerOpen(deviceIndex);
     if (m_controller) {
       qDebug() << "Gamepad connected:" << SDL_GameControllerName(m_controller);
+      emit connectionChanged(true);
     } else {
       qWarning() << "Could not open gamepad:" << SDL_GetError();
     }
@@ -49,6 +52,7 @@ void GamepadController::handleDeviceRemoved(int instanceId) {
       SDL_GameControllerClose(m_controller);
       m_controller = nullptr;
       qDebug() << "Gamepad disconnected.";
+      emit connectionChanged(false);
 
       // Try to open another one if available
       for (int i = 0; i < SDL_NumJoysticks(); ++i) {
@@ -91,7 +95,7 @@ void GamepadController::pollEvents() {
     else if (e.type == SDL_CONTROLLERBUTTONDOWN) {
       switch (e.cbutton.button) {
       case SDL_CONTROLLER_BUTTON_A:
-        simulateKeyPress(Qt::Key_Return);
+        emit buttonA();
         break;
       case SDL_CONTROLLER_BUTTON_B:
         emit buttonB();
@@ -106,15 +110,27 @@ void GamepadController::pollEvents() {
         emit buttonStart();
         break;
       case SDL_CONTROLLER_BUTTON_DPAD_UP:
+        m_navDirection = NavDpadUp;
+        m_navTicks = 0;
+        m_navInterval = 25;
         emit dpadUp();
         break;
       case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
+        m_navDirection = NavDpadDown;
+        m_navTicks = 0;
+        m_navInterval = 25;
         emit dpadDown();
         break;
       case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
+        m_navDirection = NavDpadLeft;
+        m_navTicks = 0;
+        m_navInterval = 25;
         emit dpadLeft();
         break;
       case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
+        m_navDirection = NavDpadRight;
+        m_navTicks = 0;
+        m_navInterval = 25;
         emit dpadRight();
         break;
       case SDL_CONTROLLER_BUTTON_LEFTSHOULDER:
@@ -122,6 +138,32 @@ void GamepadController::pollEvents() {
         break;
       case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER:
         emit rightShoulder();
+        break;
+      case SDL_CONTROLLER_BUTTON_BACK:
+        emit buttonSelect();
+        break;
+      default:
+        break;
+      }
+    }
+
+    else if (e.type == SDL_CONTROLLERBUTTONUP) {
+      switch (e.cbutton.button) {
+      case SDL_CONTROLLER_BUTTON_DPAD_UP:
+        if (m_navDirection == NavDpadUp)
+          m_navDirection = NavNone;
+        break;
+      case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
+        if (m_navDirection == NavDpadDown)
+          m_navDirection = NavNone;
+        break;
+      case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
+        if (m_navDirection == NavDpadLeft)
+          m_navDirection = NavNone;
+        break;
+      case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
+        if (m_navDirection == NavDpadRight)
+          m_navDirection = NavNone;
         break;
       default:
         break;
@@ -133,16 +175,26 @@ void GamepadController::pollEvents() {
         if (e.caxis.value < -m_deadzone) {
           if (!m_axisX_negative) {
             m_axisX_negative = true;
+            m_navDirection = NavLStickLeft;
+            m_navTicks = 0;
+            m_navInterval = 25;
             emit leftStickLeft();
           }
         } else if (e.caxis.value > m_deadzone) {
           if (!m_axisX_positive) {
             m_axisX_positive = true;
+            m_navDirection = NavLStickRight;
+            m_navTicks = 0;
+            m_navInterval = 25;
             emit leftStickRight();
           }
         } else {
           m_axisX_negative = false;
           m_axisX_positive = false;
+          if (m_navDirection == NavLStickLeft ||
+              m_navDirection == NavLStickRight) {
+            m_navDirection = NavNone;
+          }
         }
       }
 
@@ -151,25 +203,34 @@ void GamepadController::pollEvents() {
         if (e.caxis.value < -m_deadzone) {
           if (!m_axisY_negative) {
             m_axisY_negative = true;
+            m_navDirection = NavLStickUp;
+            m_navTicks = 0;
+            m_navInterval = 25;
             emit leftStickUp();
           }
         } else if (e.caxis.value > m_deadzone) {
           if (!m_axisY_positive) {
             m_axisY_positive = true;
+            m_navDirection = NavLStickDown;
+            m_navTicks = 0;
+            m_navInterval = 25;
             emit leftStickDown();
           }
-        }
-
-        else {
+        } else {
           m_axisY_negative = false;
           m_axisY_positive = false;
+          if (m_navDirection == NavLStickUp ||
+              m_navDirection == NavLStickDown) {
+            m_navDirection = NavNone;
+          }
         }
       }
-      // Triggers for skipping (+/- 5s)
+      // Triggers for skipping
       else if (e.caxis.axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT) {
         if (e.caxis.value > 16000) {
           if (!m_triggerL_down) {
             m_triggerL_down = true;
+            m_triggerTicksL = 0;
             emit triggerLeft();
           }
         } else {
@@ -179,6 +240,7 @@ void GamepadController::pollEvents() {
         if (e.caxis.value > 16000) {
           if (!m_triggerR_down) {
             m_triggerR_down = true;
+            m_triggerTicksR = 0;
             emit triggerRight();
           }
         } else {
@@ -211,6 +273,60 @@ void GamepadController::pollEvents() {
           emit volumeChange(-0.01f);
         }
       }
+    }
+  }
+
+  // Continuous Navigation Logic
+  if (m_navDirection != NavNone) {
+    m_navTicks++;
+    if (m_navTicks >= m_navInterval) {
+      m_navTicks = 0;
+      m_navInterval =
+          m_navInterval > 4 ? m_navInterval - 4 : 4; // accelerate down to ~64ms
+      switch (m_navDirection) {
+      case NavDpadUp:
+        emit dpadUp();
+        break;
+      case NavDpadDown:
+        emit dpadDown();
+        break;
+      case NavDpadLeft:
+        emit dpadLeft();
+        break;
+      case NavDpadRight:
+        emit dpadRight();
+        break;
+      case NavLStickUp:
+        emit leftStickUp();
+        break;
+      case NavLStickDown:
+        emit leftStickDown();
+        break;
+      case NavLStickLeft:
+        emit leftStickLeft();
+        break;
+      case NavLStickRight:
+        emit leftStickRight();
+        break;
+      default:
+        break;
+      }
+    }
+  }
+
+  // Continuous Triggers (Seek Audio) Logic
+  if (m_triggerL_down) {
+    m_triggerTicksL++;
+    if (m_triggerTicksL >= 6) { // ~96ms per tick
+      m_triggerTicksL = 0;
+      emit triggerLeft();
+    }
+  }
+  if (m_triggerR_down) {
+    m_triggerTicksR++;
+    if (m_triggerTicksR >= 6) { // ~96ms per tick
+      m_triggerTicksR = 0;
+      emit triggerRight();
     }
   }
 }

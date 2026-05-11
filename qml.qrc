@@ -5,5 +5,6 @@
         <file>qml/NowPlayingView.qml</file>
         <file>qml/EqualizerView.qml</file>
         <file>qml/MinimalView.qml</file>
+        <file>qml/GamepadControl.qml</file>
     </qresource>
 </RCC>

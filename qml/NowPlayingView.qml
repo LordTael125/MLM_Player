@@ -5,10 +5,12 @@ import QtQuick.Layouts 1.15
 
 Item {
     id: nowPlayingRoot
+    property alias controlsList: playbackControlsWrapper
 
     // Format helper function
     function formatTime(seconds) {
-        if (!seconds || isNaN(seconds)) return "00:00";
+        if (!seconds || isNaN(seconds))
+            return "00:00";
         let m = Math.floor(seconds / 60);
         let s = Math.floor(seconds % 60);
         return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
@@ -24,7 +26,8 @@ Item {
         z: 20
 
         DragHandler {
-            onActiveChanged: if (active) window.startSystemMove()
+            onActiveChanged: if (active)
+                window.startSystemMove()
         }
 
         RowLayout {
@@ -58,9 +61,9 @@ Item {
                 Layout.preferredHeight: 30
                 onClicked: {
                     if (window.visibility === Window.Maximized) {
-                        window.showNormal()
+                        window.showNormal();
                     } else {
-                        window.showMaximized()
+                        window.showMaximized();
                     }
                 }
             }
@@ -144,9 +147,11 @@ Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
             spacing: 15
-            
-            Item { Layout.fillHeight: true } // top spacer
-            
+
+            Item {
+                Layout.fillHeight: true
+            } // top spacer
+
             Text {
                 text: window.currentPlayingTitle
                 color: "white"
@@ -167,19 +172,21 @@ Item {
                 color: "#777"
                 font.pixelSize: 20
             }
-            
-            Item { Layout.preferredHeight: 30 } // Visual separation
-            
+
+            Item {
+                Layout.preferredHeight: 30
+            } // Visual separation
+
             // Re-adding Progress Bar
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 15
-                
+
                 Text {
                     text: nowPlayingRoot.formatTime(audioEngine.position)
                     color: "#888"
                 }
-                
+
                 Slider {
                     Layout.fillWidth: true
                     from: 0
@@ -188,74 +195,147 @@ Item {
                     focusPolicy: Qt.NoFocus
                     onMoved: audioEngine.position = value
                 }
-                
+
                 Text {
                     text: nowPlayingRoot.formatTime(audioEngine.duration)
                     color: "#888"
                 }
             }
-            
-            // Playback Controls
-            RowLayout {
-                Layout.alignment: Qt.AlignHCenter
-                spacing: 20
 
-                RoundButton {
-                    icon.source: window.repeatMode === 1 ? "qrc:/qml/icons/repeat_one.svg" : "qrc:/qml/icons/repeat.svg"
-                    icon.color: "white"
-                    display: AbstractButton.IconOnly
-                    checked: window.repeatMode !== 0
-                    onClicked: window.repeatMode = (window.repeatMode + 1) % 3
-                    Material.background: window.repeatMode !== 0 ? Material.accent : "transparent"
+            // Playback Controls
+            Item {
+                id: playbackControlsWrapper
+                Layout.alignment: Qt.AlignHCenter
+                Layout.preferredWidth: playbackControlsLayout.width
+                Layout.preferredHeight: 64
+
+                property int currentIndex: 2
+                function decrementCurrentIndex() {
+                    if (currentIndex > 0)
+                        currentIndex--;
                 }
-                
-                RoundButton {
-                    icon.source: "qrc:/qml/icons/prev.svg"
-                    icon.color: "white"
-                    display: AbstractButton.IconOnly
-                    onClicked: {
-                        if (audioEngine.position > 2.0) {
-                            audioEngine.setPosition(0.0)
-                        } else {
-                            if (window.currentQueueIndex > 0) {
-                                window.playTrackAtIndex(window.currentQueueIndex - 1)
+                function incrementCurrentIndex() {
+                    if (currentIndex < 4)
+                        currentIndex++;
+                }
+
+                property var currentItem: playbackControlsLayout.children[currentIndex]
+
+                Rectangle {
+                    color: (globalGamepadManager && globalGamepadManager.controllerConnected && globalGamepadManager.currentZone === "NowPlaying") ? "#1AFFFFFF" : "transparent"
+                    radius: targetItem ? targetItem.width / 2 : 0
+                    border.color: (globalGamepadManager && globalGamepadManager.controllerConnected && globalGamepadManager.currentZone === "NowPlaying") ? "#ffffff" : "transparent"
+                    border.width: (globalGamepadManager && globalGamepadManager.controllerConnected && globalGamepadManager.currentZone === "NowPlaying") ? 2 : 0
+                    z: 2
+
+                    property var targetItem: playbackControlsWrapper.currentItem
+
+                    x: targetItem ? targetItem.x + playbackControlsLayout.x : 0
+                    y: targetItem ? targetItem.y + playbackControlsLayout.y : 0
+                    width: targetItem ? targetItem.width : 0
+                    height: targetItem ? targetItem.height : 0
+
+                    Behavior on x {
+                        SpringAnimation {
+                            spring: 3
+                            damping: 0.2
+                        }
+                    }
+                    Behavior on width {
+                        SpringAnimation {
+                            spring: 3
+                            damping: 0.2
+                        }
+                    }
+                    Behavior on height {
+                        SpringAnimation {
+                            spring: 3
+                            damping: 0.2
+                        }
+                    }
+                }
+
+                RowLayout {
+                    id: playbackControlsLayout
+                    anchors.centerIn: parent
+                    spacing: 20
+
+                    RoundButton {
+                        function triggerAction() {
+                            clicked();
+                        }
+                        icon.source: window.repeatMode === 1 ? "qrc:/qml/icons/repeat_one.svg" : "qrc:/qml/icons/repeat.svg"
+                        icon.color: "white"
+                        display: AbstractButton.IconOnly
+                        checked: window.repeatMode !== 0
+                        onClicked: window.repeatMode = (window.repeatMode + 1) % 3
+                        Material.background: window.repeatMode !== 0 ? Material.accent : "transparent"
+                    }
+
+                    RoundButton {
+                        function triggerAction() {
+                            clicked();
+                        }
+                        icon.source: "qrc:/qml/icons/prev.svg"
+                        icon.color: "white"
+                        display: AbstractButton.IconOnly
+                        onClicked: {
+                            if (audioEngine.position > 2.0) {
+                                audioEngine.setPosition(0.0);
+                            } else {
+                                if (window.currentQueueIndex > 0) {
+                                    window.playTrackAtIndex(window.currentQueueIndex - 1);
+                                }
                             }
                         }
                     }
-                }
-                
-                RoundButton {
-                    icon.source: audioEngine.isPlaying ? "qrc:/qml/icons/pause.svg" : "qrc:/qml/icons/play.svg"
-                    icon.color: "white"
-                    display: AbstractButton.IconOnly
-                    width: 64
-                    height: 64
-                    onClicked: {
-                        if (audioEngine.isPlaying) audioEngine.pause()
-                        else audioEngine.play()
-                    }
-                }
 
-                RoundButton {
-                    icon.source: "qrc:/qml/icons/next.svg"
-                    icon.color: "white"
-                    display: AbstractButton.IconOnly
-                    onClicked: {
-                        if (window.currentQueueIndex >= 0 && window.currentQueueIndex < window.playbackQueue.length - 1) {
-                            window.playTrackAtIndex(window.currentQueueIndex + 1)
+                    RoundButton {
+                        function triggerAction() {
+                            clicked();
+                        }
+                        icon.source: audioEngine.isPlaying ? "qrc:/qml/icons/pause.svg" : "qrc:/qml/icons/play.svg"
+                        icon.color: "white"
+                        display: AbstractButton.IconOnly
+                        width: 64
+                        height: 64
+                        onClicked: {
+                            if (audioEngine.isPlaying)
+                                audioEngine.pause();
+                            else
+                                audioEngine.play();
                         }
                     }
-                }
 
-                RoundButton {
-                    icon.source: "qrc:/qml/icons/stop.svg"
-                    icon.color: "white"
-                    display: AbstractButton.IconOnly
-                    onClicked: audioEngine.stop()
+                    RoundButton {
+                        function triggerAction() {
+                            clicked();
+                        }
+                        icon.source: "qrc:/qml/icons/next.svg"
+                        icon.color: "white"
+                        display: AbstractButton.IconOnly
+                        onClicked: {
+                            if (window.currentQueueIndex >= 0 && window.currentQueueIndex < window.playbackQueue.length - 1) {
+                                window.playTrackAtIndex(window.currentQueueIndex + 1);
+                            }
+                        }
+                    }
+
+                    RoundButton {
+                        function triggerAction() {
+                            clicked();
+                        }
+                        icon.source: "qrc:/qml/icons/stop.svg"
+                        icon.color: "white"
+                        display: AbstractButton.IconOnly
+                        onClicked: audioEngine.stop()
+                    }
                 }
             }
 
-            Item { Layout.fillHeight: true } // spacer
+            Item {
+                Layout.fillHeight: true
+            } // spacer
         }
     }
 

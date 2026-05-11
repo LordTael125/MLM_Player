@@ -11,6 +11,20 @@ Item {
     property bool isSidebarVisible: false
     property bool isListview: false
     signal menuClicked
+    property var gamepadManager: null
+    onGamepadManagerChanged: console.log("LibraryView gamepadManager set to:", gamepadManager)
+    Timer {
+        interval: 2000
+        running: true
+        onTriggered: console.log("LibraryView Zone evaluates to:", (gamepadManager ? gamepadManager.currentZone : "NULL"))
+    }
+    property alias filterListView: filterListView
+
+    function getActiveGridView() {
+        if (mainStack.currentItem && mainStack.currentItem.contentLoader)
+            return mainStack.currentItem.contentLoader.item;
+        return null;
+    }
 
     Settings {
         id: librarySettings
@@ -24,6 +38,8 @@ Item {
             mainStack.pop();
             libraryView.activeCategoryName = libraryView.categoryContext;
             forceActiveContentFocus();
+            if (typeof gamepadManager !== "undefined")
+                gamepadManager.currentZone = "LibraryGrid";
         }
     }
 
@@ -46,6 +62,8 @@ Item {
     function toggleSidebar() {
         isSidebarVisible = !isSidebarVisible;
         forceActiveContentFocus();
+        if (typeof gamepadManager !== "undefined")
+            gamepadManager.currentZone = isSidebarVisible ? "LibrarySidebar" : "LibraryGrid";
     }
 
     RowLayout {
@@ -89,16 +107,47 @@ Item {
                     Layout.fillHeight: true
                     clip: true
                     focus: true
-                    
-                    Keys.onReturnPressed: if (currentItem) currentItem.triggerAction()
-                    Keys.onSpacePressed: if (currentItem) currentItem.triggerAction()
+
+                    highlightFollowsCurrentItem: true
+                    highlight: Rectangle {
+                        color: (globalGamepadManager && globalGamepadManager.controllerConnected && globalGamepadManager.currentZone === "LibrarySidebar") ? "#1AFFFFFF" : "transparent"
+                        border.color: (globalGamepadManager && globalGamepadManager.controllerConnected && globalGamepadManager.currentZone === "LibrarySidebar") ? "#ffffff" : "transparent"
+                        border.width: (globalGamepadManager && globalGamepadManager.controllerConnected && globalGamepadManager.currentZone === "LibrarySidebar") ? 2 : 0
+                        z: 2
+                        Behavior on y {
+                            SpringAnimation {
+                                spring: 3
+                                damping: 0.2
+                            }
+                        }
+                    }
+
+                    Keys.onReturnPressed: if (currentItem)
+                        currentItem.triggerAction()
+                    Keys.onSpacePressed: if (currentItem)
+                        currentItem.triggerAction()
 
                     model: [
-                        { name: "Tracks", ctx: "All Tracks" },
-                        { name: "Artists", ctx: "Artists" },
-                        { name: "Albums", ctx: "Albums" },
-                        { name: "Folders", ctx: "Folders" },
-                        { name: "Collections", ctx: "Collections" }
+                        {
+                            name: "Tracks",
+                            ctx: "All Tracks"
+                        },
+                        {
+                            name: "Artists",
+                            ctx: "Artists"
+                        },
+                        {
+                            name: "Albums",
+                            ctx: "Albums"
+                        },
+                        {
+                            name: "Folders",
+                            ctx: "Folders"
+                        },
+                        {
+                            name: "Collections",
+                            ctx: "Collections"
+                        }
                     ]
 
                     delegate: ItemDelegate {
@@ -109,9 +158,7 @@ Item {
                         property bool isActive: libraryView.categoryContext === modelData.ctx
 
                         background: Rectangle {
-                            color: filterListView.isCurrentItem && (filterListView.activeFocus || parent.activeFocus) ? "#333344" : (parent.isActive ? "#2a2a35" : (parent.hovered ? "#22222b" : "transparent"))
-                            border.color: filterListView.isCurrentItem && (filterListView.activeFocus || parent.activeFocus) ? "#ffffff" : "transparent"
-                            border.width: filterListView.isCurrentItem && (filterListView.activeFocus || parent.activeFocus) ? 2 : 0
+                            color: (parent.isActive ? "#2a2a35" : (parent.hovered ? "#22222b" : "transparent"))
 
                             // Left accent bar for active tab
                             Rectangle {
@@ -143,7 +190,12 @@ Item {
                             });
                             // Return focus to grid
                             var view = mainStack.currentItem;
-                            if (view) view.forceActiveFocus();
+                            if (view)
+                                view.forceActiveFocus();
+                            if (typeof gamepadManager !== "undefined")
+                                gamepadManager.currentZone = "LibraryGrid";
+
+                            libraryView.toggleSidebar();
                         }
 
                         onClicked: {
@@ -196,7 +248,7 @@ Item {
                     }
 
                     ToolButton {
-                        icon.source: libraryView.isListview ? "qrc:/qml/icons/view_list.svg" : "qrc:/qml/icons/view_grid.svg"
+                        icon.source: libraryView.isListview ? "qrc:/qml/icons/view_grid.svg" : "qrc:/qml/icons/view_list.svg"
                         icon.color: "white"
                         onClicked: libraryView.switchview()
                     }
@@ -243,6 +295,8 @@ Item {
                 return trackModel;
             }
 
+            property alias contentLoader: contentLoader
+
             function forceContentFocus() {
                 if (contentLoader.item) {
                     contentLoader.item.forceActiveFocus();
@@ -266,13 +320,43 @@ Item {
                     clip: true
                     cacheBuffer: 1000
                     focus: true
-                    
-                    Keys.onReturnPressed: if (currentItem) currentItem.triggerAction()
-                    Keys.onSpacePressed: if (currentItem) currentItem.triggerAction()
+
+                    highlightFollowsCurrentItem: true
+                    highlight: Item {
+                        z: 2
+                        Rectangle {
+                            anchors.fill: parent
+                            anchors.margins: 10
+                            color: (globalGamepadManager && globalGamepadManager.controllerConnected && globalGamepadManager.currentZone === "LibraryGrid") ? "#1AFFFFFF" : "transparent"
+                            radius: 8
+                            border.color: (globalGamepadManager && globalGamepadManager.controllerConnected && globalGamepadManager.currentZone === "LibraryGrid") ? "#ffffff" : "transparent"
+                            border.width: (globalGamepadManager && globalGamepadManager.controllerConnected && globalGamepadManager.currentZone === "LibraryGrid") ? 2 : 0
+                        }
+                        Behavior on x {
+                            SpringAnimation {
+                                spring: 3
+                                damping: 0.2
+                            }
+                        }
+                        Behavior on y {
+                            SpringAnimation {
+                                spring: 3
+                                damping: 0.2
+                            }
+                        }
+                    }
+
+                    Keys.onReturnPressed: if (currentItem)
+                        currentItem.triggerAction()
+                    Keys.onSpacePressed: if (currentItem)
+                        currentItem.triggerAction()
 
                     delegate: Item {
+                        id: gridDelegate
                         width: categoryContainer.categoryType === "Tracks" ? 160 : 180
                         height: categoryContainer.categoryType === "Tracks" ? 200 : 220
+
+                        property bool isCurrentItem: GridView.isCurrentItem
 
                         property bool isTrack: categoryContainer.categoryType === "Tracks"
                         property string dTitle: isTrack ? model.title : modelData.name
@@ -291,8 +375,10 @@ Item {
                         function triggerAction() {
                             if (isTrack) {
                                 if (window.currentPlayingPath === dPath) {
-                                    if (audioEngine.isPlaying) audioEngine.pause();
-                                    else audioEngine.play();
+                                    if (audioEngine.isPlaying)
+                                        audioEngine.pause();
+                                    else
+                                        audioEngine.play();
                                 } else {
                                     window.playTrackAtIndex(index, libraryView.activeCategoryName);
                                 }
@@ -316,10 +402,10 @@ Item {
                         Rectangle {
                             anchors.fill: parent
                             anchors.margins: 10
-                            color: GridView.isCurrentItem && (gridView.activeFocus || parent.activeFocus) ? "#333344" : ((isTrack && window.currentPlayingPath === dPath) ? "#2a2a35" : "#202025")
+                            color: ((isTrack && window.currentPlayingPath === dPath) ? "#2a2a35" : "#202025")
                             radius: 8
-                            border.color: GridView.isCurrentItem && (gridView.activeFocus || parent.activeFocus) ? "#ffffff" : ((isTrack && window.currentPlayingPath === dPath) ? "#0078d7" : "transparent")
-                            border.width: (GridView.isCurrentItem && (gridView.activeFocus || parent.activeFocus)) ? 2 : ((isTrack && window.currentPlayingPath === dPath) ? 2 : 0)
+                            border.color: ((isTrack && window.currentPlayingPath === dPath) ? "#0078d7" : "transparent")
+                            border.width: ((isTrack && window.currentPlayingPath === dPath) ? 2 : 0)
 
                             Rectangle {
                                 id: artRect
@@ -398,13 +484,43 @@ Item {
                     clip: true
                     cacheBuffer: 1000
                     focus: true
-                    
-                    Keys.onReturnPressed: if (currentItem) currentItem.triggerAction()
-                    Keys.onSpacePressed: if (currentItem) currentItem.triggerAction()
+
+                    highlightFollowsCurrentItem: true
+                    highlight: Item {
+                        z: 2
+                        Rectangle {
+                            anchors.fill: parent
+                            anchors.margins: 2
+                            color: (globalGamepadManager && globalGamepadManager.controllerConnected && globalGamepadManager.currentZone === "LibraryGrid") ? "#1AFFFFFF" : "transparent"
+                            radius: 6
+                            border.color: (globalGamepadManager && globalGamepadManager.controllerConnected && globalGamepadManager.currentZone === "LibraryGrid") ? "#ffffff" : "transparent"
+                            border.width: (globalGamepadManager && globalGamepadManager.controllerConnected && globalGamepadManager.currentZone === "LibraryGrid") ? 2 : 0
+                        }
+                        Behavior on x {
+                            SpringAnimation {
+                                spring: 3
+                                damping: 0.2
+                            }
+                        }
+                        Behavior on y {
+                            SpringAnimation {
+                                spring: 3
+                                damping: 0.2
+                            }
+                        }
+                    }
+
+                    Keys.onReturnPressed: if (currentItem)
+                        currentItem.triggerAction()
+                    Keys.onSpacePressed: if (currentItem)
+                        currentItem.triggerAction()
 
                     delegate: Item {
+                        id: listDelegate
                         width: ListView.view.width
                         height: 60
+
+                        property bool isCurrentItem: ListView.isCurrentItem
 
                         property bool isTrack: categoryContainer.categoryType === "Tracks"
                         property string dTitle: isTrack ? model.title : modelData.name
@@ -423,8 +539,10 @@ Item {
                         function triggerAction() {
                             if (isTrack) {
                                 if (window.currentPlayingPath === dPath) {
-                                    if (audioEngine.isPlaying) audioEngine.pause();
-                                    else audioEngine.play();
+                                    if (audioEngine.isPlaying)
+                                        audioEngine.pause();
+                                    else
+                                        audioEngine.play();
                                 } else {
                                     window.playTrackAtIndex(index, libraryView.activeCategoryName);
                                 }
@@ -448,9 +566,9 @@ Item {
                         Rectangle {
                             anchors.fill: parent
                             anchors.margins: 2
-                            color: ListView.isCurrentItem && (listView.activeFocus || parent.activeFocus) ? "#333344" : ((isTrack && window.currentPlayingPath === dPath) ? "#2a2a35" : (hoverArea.containsMouse ? "#22222b" : "transparent"))
-                            border.color: ListView.isCurrentItem && (listView.activeFocus || parent.activeFocus) ? "#ffffff" : ((isTrack && window.currentPlayingPath === dPath) ? "#0078d7" : "transparent")
-                            border.width: (ListView.isCurrentItem && (listView.activeFocus || parent.activeFocus)) ? 2 : ((isTrack && window.currentPlayingPath === dPath) ? 2 : 0)
+                            color: ((isTrack && window.currentPlayingPath === dPath) ? "#2a2a35" : (hoverArea.containsMouse ? "#22222b" : "transparent"))
+                            border.color: ((isTrack && window.currentPlayingPath === dPath) ? "#0078d7" : "transparent")
+                            border.width: ((isTrack && window.currentPlayingPath === dPath) ? 2 : 0)
                             radius: 6
 
                             Rectangle {

@@ -24,15 +24,6 @@ Item {
         z: 20
 
         ToolButton {
-            icon.source: "qrc:/qml/icons/minimize.svg"
-            icon.color: "white"
-            display: AbstractButton.IconOnly
-            Layout.preferredWidth: 35
-            Layout.preferredHeight: 35
-            onClicked: window.showMinimized()
-        }
-
-        ToolButton {
             icon.source: "qrc:/qml/icons/close.svg"
             icon.color: "white"
             display: AbstractButton.IconOnly

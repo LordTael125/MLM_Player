@@ -14,6 +14,7 @@
         <file>qml/icons/queue.svg</file>
         <file>qml/icons/close.svg</file>
         <file>qml/icons/maximize.svg</file>
+        <file>qml/icons/unmaximize.svg</file>
         <file>qml/icons/minimize.svg</file>
         <file>qml/icons/back.svg</file>
         <file>qml/icons/panel_close.svg</file>
