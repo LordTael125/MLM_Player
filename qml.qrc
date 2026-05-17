@@ -6,5 +6,6 @@
         <file>qml/EqualizerView.qml</file>
         <file>qml/MinimalView.qml</file>
         <file>qml/GamepadControl.qml</file>
+        <file>qml/AppPopups.qml</file>
     </qresource>
 </RCC>

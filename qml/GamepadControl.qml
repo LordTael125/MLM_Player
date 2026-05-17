@@ -22,6 +22,31 @@ Item {
     property var playbackBar
     property var volumeOSDPopup
 
+    function evaluateZone() {
+        if (supportPopup && supportPopup.opened) {
+            currentZone = "SupportPopup";
+        } else if (shortcutsPopup && shortcutsPopup.opened) {
+            currentZone = "ShortcutsPopup";
+        } else if (eqPopup && eqPopup.opened) {
+            currentZone = "EqPopup";
+        } else if (mainMenuPopup && mainMenuPopup.opened) {
+            currentZone = "MainMenu";
+        } else if (queueDrawer && queueDrawer.opened) {
+            currentZone = "QueueDrawer";
+        } else if (nowPlayingPopup && nowPlayingPopup.opened) {
+            currentZone = "NowPlaying";
+        } else if (launchMode === "Library") {
+            if (libraryViewMain && libraryViewMain.isSidebarVisible) {
+                currentZone = "LibrarySidebar";
+            } else {
+                currentZone = "LibraryGrid";
+            }
+        } else {
+            currentZone = "NowPlaying";
+        }
+        console.log("GamepadControl Zone dynamically evaluated to:", currentZone);
+    }
+
     Connections {
         target: gamepad
 
@@ -62,8 +87,10 @@ Item {
         function onButtonY() {
             if (launchMode === "Minimal")
                 return;
-            if (launchMode === "Library" && libraryViewMain)
+            if (launchMode === "Library" && libraryViewMain) {
                 libraryViewMain.toggleSidebar();
+                root.evaluateZone();
+            }
         }
 
         function onButtonStart() {
@@ -148,7 +175,12 @@ Item {
         }
 
         function onButtonSelect() {
-            libraryViewMain.switchview;
+            if (launchMode === "Minimal") {
+                root.triggerAction();
+            } else if (window && window.libraryViewMain) {
+                window.libraryViewMain.switchView();
+                root.evaluateZone();
+            }
         }
     }
 

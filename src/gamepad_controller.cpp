@@ -7,8 +7,8 @@
 #include <QWindow>
 
 GamepadController::GamepadController(QObject *parent) : QObject(parent) {
-  SDL_SetHint(SDL_HINT_VIDEODRIVER, "dummy");
-  if (SDL_Init(SDL_INIT_GAMECONTROLLER) < 0) {
+  // Explicitly initialize only input subsystems to prevent Wayland hotplug/detection issues
+  if (SDL_Init(SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER | SDL_INIT_EVENTS) < 0) {
     qWarning() << "SDL could not initialize! SDL_Error:" << SDL_GetError();
     return;
   }
@@ -82,6 +82,15 @@ void GamepadController::simulateKeyPress(int qtKey) {
 }
 
 void GamepadController::pollEvents() {
+  bool isActive = (QGuiApplication::applicationState() == Qt::ApplicationActive);
+
+  if (!isActive) {
+    // Force reset all continuous navigation and triggers when app loses focus
+    m_navDirection = NavNone;
+    m_triggerL_down = false;
+    m_triggerR_down = false;
+  }
+
   SDL_Event e;
   while (SDL_PollEvent(&e) != 0) {
     if (e.type == SDL_CONTROLLERDEVICEADDED) {
@@ -90,6 +99,11 @@ void GamepadController::pollEvents() {
 
     else if (e.type == SDL_CONTROLLERDEVICEREMOVED) {
       handleDeviceRemoved(e.cdevice.which);
+    }
+
+    // Ignore all input events if the application is not actively focused
+    if (!isActive) {
+      continue;
     }
 
     else if (e.type == SDL_CONTROLLERBUTTONDOWN) {
