@@ -25,7 +25,7 @@ ApplicationWindow {
     property string currentPlayingTitle: "No Song Playing"
     property string currentPlayingArtist: ""
     property string currentPlayingPath: ""
-    property string applicationVersion: "1.3-beta"
+    property string applicationVersion: "1.3"
     property bool currentPlayingHasCoverArt: false
     property var playbackQueue: []
     property int currentQueueIndex: -1
@@ -393,6 +393,7 @@ ApplicationWindow {
                 spacing: 15
 
                 Label {
+                    Layout.leftMargin:15
                     text: window.title
                     color: "white"
                     font.bold: true
