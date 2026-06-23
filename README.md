@@ -58,6 +58,8 @@ Navigate your library at the speed of thought. Press **`?`** inside the app to p
 
 ## 🛠️ Technology Stack
 
+
+
 - **Core Application**: [C++17](https://isocpp.org/)
 - **GUI Framework**: [Qt 5.15 LTS (QML / Qt Quick)](https://www.qt.io/)
 - **Audio Decoding**: [MiniAudio](https://miniaud.io/)

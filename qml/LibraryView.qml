@@ -74,7 +74,7 @@ Item {
         // Left sidebar for filters
         Rectangle {
             id: sidebarRect
-            Layout.preferredWidth: isSidebarVisible ? 200 : 0
+            Layout.preferredWidth: isSidebarVisible ? 250 : 0
             Layout.fillHeight: true
             color: "#18181c"
             radius: 12
@@ -315,8 +315,10 @@ Item {
                 GridView {
                     id: gridView
                     model: categoryContainer.activeModel
-                    cellWidth: categoryContainer.categoryType === "Tracks" ? 160 : 180
-                    cellHeight: categoryContainer.categoryType === "Tracks" ? 200 : 220
+                    property int baseCellWidth: categoryContainer.categoryType === "Tracks" ? 140 : 160
+                    property int columns: Math.max(1, Math.floor(width / baseCellWidth))
+                    cellWidth: Math.floor(width / columns)
+                    cellHeight: cellWidth + 40
                     clip: true
                     cacheBuffer: 1000
                     focus: true
@@ -353,8 +355,8 @@ Item {
 
                     delegate: Item {
                         id: gridDelegate
-                        width: categoryContainer.categoryType === "Tracks" ? 160 : 180
-                        height: categoryContainer.categoryType === "Tracks" ? 200 : 220
+                        width: GridView.view.cellWidth
+                        height: GridView.view.cellHeight
 
                         property bool isCurrentItem: GridView.isCurrentItem
 
