@@ -15,7 +15,7 @@
 
 ---
 
-<img src="Dist/MLM_Player.png" alt="Alt text" width="800">
+<img src="Dist/MLM_Player.png" alt="Alt text" width="400"><img src="Dist/MLM_Player_01.png" alt="Main View" width="400">
 
 ---
 
