@@ -242,7 +242,10 @@ ApplicationWindow {
         }
     }
 
-    // --- Global Keyboard Shortcuts ---
+    // ======================================
+    // |==== Global Keyboard Shortcuts  ====|
+    // ======================================
+
     property real previousVolume: 1.0
 
     Shortcut {
@@ -368,11 +371,18 @@ ApplicationWindow {
     property alias queueDrawer: appPopups.queueDrawer
     property alias queueListView: appPopups.queueListView
 
+    // =====================================
+    // |=====   Main Content Area      ====|
+    // =====================================
+
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
 
-        // Custom Title Bar
+        // =====================================
+        // |=====   Custom Title Bar     ======|
+        // =====================================
+
         Rectangle {
             id: titleBar
             Layout.fillWidth: true
@@ -380,7 +390,10 @@ ApplicationWindow {
             color: '#100f14'
             visible: !window.isFullScreen && launchMode === "Library"
 
+            // ===============================================
             // Drag Handler for moving the frameless window
+            // ===============================================
+
             DragHandler {
                 target: null
                 onActiveChanged: if (active)
@@ -403,7 +416,7 @@ ApplicationWindow {
 
                 Item {
                     Layout.fillWidth: true
-                } // spacer pushes buttons to the right
+                }
 
                 ToolButton {
                     icon.source: "qrc:/qml/icons/minimize.svg"
@@ -464,7 +477,10 @@ ApplicationWindow {
             }
         }
 
-        // Persistent Bottom Playback Bar
+        // =================================================
+        // |====    Persistent Bottom Playback Bar     ====|
+        // =================================================
+
         Rectangle {
             id: playbackBar
             Layout.fillWidth: true

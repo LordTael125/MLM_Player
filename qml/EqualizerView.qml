@@ -1,6 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import QtGraphicalEffects 1.15
 
 Item {
     id: eqRoot
@@ -30,55 +31,122 @@ Item {
             }
         }
 
-        RowLayout {
+        Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            spacing: 10
+            color: "#0c0c0f"
+            radius: 12
+            border.color: "#22222b"
+            border.width: 1
 
-            Repeater {
-                model: 10 // 10 bands
-                delegate: ColumnLayout {
-                    Layout.fillHeight: true
-                    Layout.fillWidth: true
-                    
-                    Label {
-                        Layout.alignment: Qt.AlignHCenter
-                        text: (eqSlider.value > 0 ? "+" : "") + eqSlider.value.toFixed(1) + " dB"
-                        color: "#aaa"
-                        font.pixelSize: 12
-                    }
+            RowLayout {
+                anchors.fill: parent
+                anchors.margins: 20
+                spacing: 15
 
-                    Slider {
-                        id: eqSlider
+                Repeater {
+                    model: 10 // 10 bands
+                    delegate: ColumnLayout {
                         Layout.fillHeight: true
-                        Layout.alignment: Qt.AlignHCenter
-                        orientation: Qt.Vertical
-                        from: -12.0
-                        to: 12.0
-                        value: {
-                            var dummy = eqRoot.triggerUpdate;
-                            return audioEngine.equalizer ? audioEngine.equalizer.bandGain(index) : 0
+                        Layout.fillWidth: true
+                        
+                        Label {
+                            Layout.fillWidth: true
+                            horizontalAlignment: Text.AlignHCenter
+                            text: (eqSlider.value > 0 ? "+" : "") + eqSlider.value.toFixed(1) + " dB"
+                            color: eqSlider.value === 0 ? "#888" : (eqSlider.value > 0 ? "#4caf50" : "#ff9800")
+                            font.pixelSize: 12
+                            font.bold: true
                         }
-                        enabled: audioEngine.equalizer ? audioEngine.equalizer.enabled : false
-                        focusPolicy: Qt.NoFocus
-                        onMoved: {
-                            if (audioEngine.equalizer) {
-                                audioEngine.equalizer.setBandGain(index, value)
+
+                        Slider {
+                            id: eqSlider
+                            Layout.fillHeight: true
+                            Layout.alignment: Qt.AlignHCenter
+                            orientation: Qt.Vertical
+                            from: -12.0
+                            to: 12.0
+                            value: {
+                                var dummy = eqRoot.triggerUpdate;
+                                return audioEngine.equalizer ? audioEngine.equalizer.bandGain(index) : 0
+                            }
+                            enabled: audioEngine.equalizer ? audioEngine.equalizer.enabled : false
+                            focusPolicy: Qt.NoFocus
+                            onMoved: {
+                                if (audioEngine.equalizer) {
+                                    audioEngine.equalizer.setBandGain(index, value)
+                                }
+                            }
+
+                            background: Rectangle {
+                                x: eqSlider.leftPadding + (eqSlider.availableWidth - width) / 2
+                                y: eqSlider.topPadding
+                                implicitWidth: 8
+                                implicitHeight: 250
+                                width: implicitWidth
+                                height: eqSlider.availableHeight
+                                radius: 4
+                                color: "#1a1a24"
+
+                                // Zero dB mark
+                                Rectangle {
+                                    width: 24
+                                    height: 2
+                                    color: "#33333b"
+                                    anchors.centerIn: parent
+                                }
+
+                                // Fill from center
+                                Rectangle {
+                                    width: parent.width
+                                    radius: 4
+                                    color: !eqSlider.enabled ? "#555" : (eqSlider.value > 0 ? "#4caf50" : "#ff9800")
+                                    y: eqSlider.position > 0.5 ? eqSlider.visualPosition * parent.height : parent.height / 2
+                                    height: Math.abs(eqSlider.position - 0.5) * parent.height
+                                    
+                                    layer.enabled: eqSlider.enabled && eqSlider.value !== 0
+                                    layer.effect: Glow {
+                                        color: parent.color
+                                        radius: 5
+                                        samples: 10
+                                        transparentBorder: true
+                                    }
+                                }
+                            }
+
+                            handle: Rectangle {
+                                x: eqSlider.leftPadding + (eqSlider.availableWidth - width) / 2
+                                y: eqSlider.topPadding + eqSlider.visualPosition * (eqSlider.availableHeight - height)
+                                width: 20
+                                height: 20
+                                radius: 10
+                                color: eqSlider.pressed ? "#fff" : "#e0e0e0"
+                                border.color: "#18181c"
+                                border.width: 2
+                                
+                                layer.enabled: true
+                                layer.effect: DropShadow {
+                                    transparentBorder: true
+                                    color: "#000000"
+                                    radius: 6
+                                    samples: 12
+                                    verticalOffset: 2
+                                }
                             }
                         }
-                    }
 
-                    Label {
-                        Layout.alignment: Qt.AlignHCenter
-                        text: {
-                            if (!audioEngine.equalizer) return ""
-                            let freq = audioEngine.equalizer.bandFrequency(index)
-                            if (freq >= 1000) return (freq / 1000).toFixed(0) + "k"
-                            return freq.toFixed(0)
+                        Label {
+                            Layout.alignment: Qt.AlignHCenter
+                            text: {
+                                if (!audioEngine.equalizer) return ""
+                                let freq = audioEngine.equalizer.bandFrequency(index)
+                                if (freq >= 1000) return (freq / 1000).toFixed(0) + "k"
+                                return freq.toFixed(0)
+                            }
+                            color: "white"
+                            font.bold: true
+                            font.pixelSize: 14
                         }
-                        color: "white"
-                        font.bold: true
-                        font.pixelSize: 14
                     }
                 }
             }
@@ -92,8 +160,8 @@ Item {
 
             Button {
                 text: "Load"
-                background: Rectangle { color: "#33333b"; radius: 6 }
-                contentItem: Text { text: parent.text; color: "white"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.bold: true }
+                background: Rectangle { color: parent.hovered ? "#3a3a44" : "#33333b"; radius: 6 }
+                contentItem: Text { text: parent.text; color: "white"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.bold: true; leftPadding: 20; rightPadding: 20; font.pixelSize: 14 }
                 onClicked: {
                     if (audioEngine.equalizer) {
                         loadPresetPopup.presetList = audioEngine.equalizer.getPresetNames();
@@ -103,8 +171,8 @@ Item {
             }
             Button {
                 text: "Save"
-                background: Rectangle { color: "#0078d7"; radius: 6 }
-                contentItem: Text { text: parent.text; color: "white"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.bold: true }
+                background: Rectangle { color: parent.hovered ? "#198ce6" : "#0078d7"; radius: 6 }
+                contentItem: Text { text: parent.text; color: "white"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; font.bold: true; leftPadding: 20; rightPadding: 20; font.pixelSize: 14 }
                 onClicked: {
                     savePresetPopup.open()
                 }
@@ -117,49 +185,51 @@ Item {
         id: savePresetPopup
         x: Math.round((parent.width - width) / 2)
         y: Math.round((parent.height - height) / 2)
-        width: 300
-        height: 200
+        width: 350
+        height: 220
         modal: true
         focus: true
-        background: Rectangle { color: "#18181c"; radius: 8; border.color: "#33333b" }
+        background: Rectangle { color: "#18181c"; radius: 12; border.color: "#33333b"; border.width: 1 }
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
 
         ColumnLayout {
             anchors.fill: parent
-            anchors.margins: 20
-            spacing: 15
+            anchors.margins: 25
+            spacing: 20
 
             Label {
                 text: "Save Preset"
                 font.bold: true
                 color: "white"
-                font.pixelSize: 18
+                font.pixelSize: 22
             }
 
             TextField {
                 id: presetNameField
                 Layout.fillWidth: true
-                placeholderText: "Preset Name"
+                placeholderText: "Enter Preset Name..."
                 color: "white"
-                horizontalAlignment: TextInput.AlignHCenter
-                background: Rectangle { color: "#22222b"; radius: 4 }
+                font.pixelSize: 16
+                horizontalAlignment: TextInput.AlignLeft
+                leftPadding: 15
+                background: Rectangle { color: "#22222b"; radius: 8; border.color: presetNameField.activeFocus ? "#0078d7" : "#33333b"; border.width: 1 }
             }
 
             RowLayout {
                 Layout.fillWidth: true
                 Layout.alignment: Qt.AlignRight
-                spacing: 10
+                spacing: 15
 
                 Button {
                     text: "Cancel"
-                    background: Rectangle { color: "#33333b"; radius: 4 }
-                    contentItem: Text { text: parent.text; color: "white"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; leftPadding: 15; rightPadding: 15 }
+                    background: Rectangle { color: parent.hovered ? "#3a3a44" : "#33333b"; radius: 6 }
+                    contentItem: Text { text: parent.text; color: "white"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; leftPadding: 20; rightPadding: 20; font.pixelSize: 14; font.bold: true }
                     onClicked: savePresetPopup.close()
                 }
                 Button {
                     text: "Save"
-                    background: Rectangle { color: "#0078d7"; radius: 4 }
-                    contentItem: Text { text: parent.text; color: "white"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; leftPadding: 15; rightPadding: 15 }
+                    background: Rectangle { color: parent.hovered ? "#198ce6" : "#0078d7"; radius: 6 }
+                    contentItem: Text { text: parent.text; color: "white"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; leftPadding: 20; rightPadding: 20; font.pixelSize: 14 }
                     onClicked: {
                         if (presetNameField.text !== "" && audioEngine.equalizer) {
                             audioEngine.equalizer.saveCustomPreset(presetNameField.text);
@@ -177,74 +247,89 @@ Item {
         id: loadPresetPopup
         x: Math.round((parent.width - width) / 2)
         y: Math.round((parent.height - height) / 2)
-        width: 300
-        height: 400
+        width: 350
+        height: 450
         modal: true
         focus: true
-        background: Rectangle { color: "#18181c"; radius: 8; border.color: "#33333b" }
+        background: Rectangle { color: "#18181c"; radius: 12; border.color: "#33333b"; border.width: 1 }
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
 
         property var presetList: []
 
         ColumnLayout {
             anchors.fill: parent
-            anchors.margins: 20
+            anchors.margins: 25
             spacing: 15
 
             Label {
                 text: "Load Preset"
                 font.bold: true
                 color: "white"
-                font.pixelSize: 18
+                font.pixelSize: 22
             }
 
-            ListView {
+            Rectangle {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                clip: true
-                model: loadPresetPopup.presetList
-                delegate: ItemDelegate {
-                    width: ListView.view.width
-                    height: 40
+                color: "#121216"
+                radius: 8
+                border.color: "#22222b"
+                border.width: 1
+
+                ListView {
+                    anchors.fill: parent
+                    anchors.margins: 5
+                    clip: true
+                    model: loadPresetPopup.presetList
+                    ScrollBar.vertical: ScrollBar { }
                     
-                    contentItem: RowLayout {
-                        anchors.fill: parent
-                        anchors.leftMargin: 10
-                        anchors.rightMargin: 10
+                    delegate: ItemDelegate {
+                        width: ListView.view.width
+                        height: 45
                         
-                        Text {
-                            text: modelData
-                            color: "white"
-                            font.pixelSize: 16
-                            Layout.fillWidth: true
-                            verticalAlignment: Text.AlignVCenter
-                        }
-                        
-                        ToolButton {
-                            icon.source: "qrc:/qml/icons/close.svg"
-                            icon.color: "#ff4444"
-                            visible: audioEngine.equalizer ? audioEngine.equalizer.isCustomPreset(modelData) : false
-                            Layout.preferredWidth: 30
-                            Layout.preferredHeight: 30
-                            padding: 5
-                            onClicked: {
-                                if (audioEngine.equalizer) {
-                                    audioEngine.equalizer.deleteCustomPreset(modelData);
-                                    loadPresetPopup.presetList = audioEngine.equalizer.getPresetNames(); // Refresh
+                        contentItem: RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 15
+                            anchors.rightMargin: 10
+                            
+                            Text {
+                                text: modelData
+                                color: "white"
+                                font.pixelSize: 16
+                                Layout.fillWidth: true
+                                verticalAlignment: Text.AlignVCenter
+                            }
+                            
+                            ToolButton {
+                                icon.source: "qrc:/qml/icons/close.svg"
+                                icon.color: "#ff4444"
+                                visible: audioEngine.equalizer ? audioEngine.equalizer.isCustomPreset(modelData) : false
+                                Layout.preferredWidth: 32
+                                Layout.preferredHeight: 32
+                                padding: 6
+                                onClicked: {
+                                    if (audioEngine.equalizer) {
+                                        audioEngine.equalizer.deleteCustomPreset(modelData);
+                                        loadPresetPopup.presetList = audioEngine.equalizer.getPresetNames(); // Refresh
+                                    }
+                                }
+                                background: Rectangle {
+                                    color: parent.hovered ? "#331111" : "transparent"
+                                    radius: 16
                                 }
                             }
                         }
-                    }
 
-                    background: Rectangle {
-                        color: parent.hovered ? "#2a2a35" : "transparent"
-                        radius: 4
-                    }
-                    onClicked: {
-                        if (audioEngine.equalizer) {
-                            audioEngine.equalizer.loadPreset(modelData);
-                            eqRoot.triggerUpdate++;
-                            loadPresetPopup.close();
+                        background: Rectangle {
+                            color: parent.hovered ? "#22222b" : "transparent"
+                            radius: 6
+                        }
+                        onClicked: {
+                            if (audioEngine.equalizer) {
+                                audioEngine.equalizer.loadPreset(modelData);
+                                eqRoot.triggerUpdate++;
+                                loadPresetPopup.close();
+                            }
                         }
                     }
                 }
@@ -253,6 +338,8 @@ Item {
             Button {
                 text: "Close"
                 Layout.alignment: Qt.AlignRight
+                background: Rectangle { color: parent.hovered ? "#3a3a44" : "#33333b"; radius: 6 }
+                contentItem: Text { text: parent.text; color: "white"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; leftPadding: 20; rightPadding: 20; font.pixelSize: 14; font.bold: true }
                 onClicked: loadPresetPopup.close()
             }
         }
