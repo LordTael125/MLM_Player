@@ -153,17 +153,17 @@ Item {
                             ctx: "Albums"
                         },
                         {
-                            name: "Folders",
-                            ctx: "Folders"
-                        },
-                        {
                             name: "Collections",
                             ctx: "Collections"
                         },
                         {
+                            name: "Folders",
+                            ctx: "Folders"
+                        },
+                        {
                             name: "Most Played",
                             ctx: "Most Played"
-                        }     
+                        }
                     ]
 
                     delegate: ItemDelegate {

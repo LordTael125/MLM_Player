@@ -9,6 +9,7 @@
 #include "track_model.h"
 #include "gamepad_controller.h"
 #include "playlist_manager.h"
+#include "mpris_manager.h"
 
 // TagLib includes
 #include <QtNetwork/QLocalServer>
@@ -86,6 +87,7 @@ int main(int argc, char *argv[]) {
   TrackModel trackModel;
   GamepadController gamepad;
   PlaylistManager playlistManager;
+  MprisManager mprisManager;
 
   // Connect scanner to model
   QObject::connect(&libraryScanner, &LibraryScanner::tracksAdded, &trackModel,
@@ -97,6 +99,17 @@ int main(int argc, char *argv[]) {
                    &libraryScanner, &LibraryScanner::updatePlayTime);
   QObject::connect(&audioEngine, &AudioEngine::playTimeAccumulated,
                    &trackModel, &TrackModel::updateTrackPlayTime);
+                   
+  QObject::connect(&mprisManager, &MprisManager::playRequested, &audioEngine, &AudioEngine::play);
+  QObject::connect(&mprisManager, &MprisManager::pauseRequested, &audioEngine, &AudioEngine::pause);
+  QObject::connect(&mprisManager, &MprisManager::playPauseRequested, &audioEngine, [&audioEngine]() {
+    if (audioEngine.isPlaying()) audioEngine.pause();
+    else audioEngine.play();
+  });
+  QObject::connect(&mprisManager, &MprisManager::stopRequested, &audioEngine, &AudioEngine::stop);
+  QObject::connect(&mprisManager, &MprisManager::seekRequested, &audioEngine, [&audioEngine](int pos) {
+    audioEngine.setPosition(pos);
+  });
 
   if (launchMode == "Library") {
     libraryScanner.loadDatabase();
@@ -136,6 +149,7 @@ int main(int argc, char *argv[]) {
   engine.rootContext()->setContextProperty("trackModel", &trackModel);
   engine.rootContext()->setContextProperty("gamepad", &gamepad);
   engine.rootContext()->setContextProperty("playlistManager", &playlistManager);
+  engine.rootContext()->setContextProperty("mprisManager", &mprisManager);
 
   const QUrl url(QStringLiteral("qrc:/qml/main.qml"));
   QObject::connect(

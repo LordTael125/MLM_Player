@@ -139,6 +139,8 @@ ApplicationWindow {
                                 window.currentPlayingHasCoverArt = t.hasCoverArt;
 
                                 audioEngine.loadFile(t.filePath);
+                                mprisManager.setMetadata(t.filePath, t.title, t.artist, t.album !== undefined ? t.album : "", "", Math.floor(t.duration || 0));
+                                mprisManager.setPlaybackStatus(audioEngine.isPlaying);
                                 // Ensure miniaudio has enough time to initialize ASYNC load before seeking
                                 if (allowRestore) {
                                     restorePosTimer.start();
@@ -205,6 +207,8 @@ ApplicationWindow {
 
         audioEngine.loadFile(track.filePath);
         audioEngine.play();
+        
+        mprisManager.setMetadata(track.filePath, track.title, track.artist, track.album !== undefined ? track.album : "", "", Math.floor(track.duration || 0));
 
         if (queueListView) {
             queueListView.positionViewAtIndex(currentQueueIndex, ListView.Beginning);
@@ -234,6 +238,28 @@ ApplicationWindow {
                 if (currentQueueIndex >= 0 && currentQueueIndex < playbackQueue.length - 1) {
                     playTrackAtIndex(currentQueueIndex + 1);
                 }
+            }
+        }
+        function onPlayingChanged(isPlaying) {
+            mprisManager.setPlaybackStatus(isPlaying);
+        }
+        function onPositionChanged(pos) {
+            mprisManager.setPosition(Math.floor(pos));
+        }
+    }
+
+    Connections {
+        target: mprisManager
+        function onNextRequested() {
+            if (currentQueueIndex >= 0 && currentQueueIndex < playbackQueue.length - 1) {
+                playTrackAtIndex(currentQueueIndex + 1);
+            }
+        }
+        function onPreviousRequested() {
+            if (currentQueueIndex > 0) {
+                playTrackAtIndex(currentQueueIndex - 1);
+            } else if (playbackQueue.length > 0) {
+                playTrackAtIndex(0);
             }
         }
     }
