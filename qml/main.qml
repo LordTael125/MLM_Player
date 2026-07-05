@@ -25,7 +25,7 @@ ApplicationWindow {
     property string currentPlayingTitle: "No Song Playing"
     property string currentPlayingArtist: ""
     property string currentPlayingPath: ""
-    property string applicationVersion: "1.3.1"
+    property string applicationVersion: "1.3.2"
     property bool currentPlayingHasCoverArt: false
     property var playbackQueue: []
     property int currentQueueIndex: -1
@@ -101,6 +101,10 @@ ApplicationWindow {
         property alias savedRepeatMode: window.repeatMode
     }
 
+    //  ========================================
+    // |===      Restore Playtime            ===|
+    //  ========================================
+
     Timer {
         id: startupRestoreTimer
         interval: 200
@@ -135,6 +139,8 @@ ApplicationWindow {
                                 window.currentPlayingHasCoverArt = t.hasCoverArt;
 
                                 audioEngine.loadFile(t.filePath);
+                                mprisManager.setMetadata(t.filePath, t.title, t.artist, t.album !== undefined ? t.album : "", "", Math.floor(t.duration || 0));
+                                mprisManager.setPlaybackStatus(audioEngine.isPlaying);
                                 // Ensure miniaudio has enough time to initialize ASYNC load before seeking
                                 if (allowRestore) {
                                     restorePosTimer.start();
@@ -201,6 +207,8 @@ ApplicationWindow {
 
         audioEngine.loadFile(track.filePath);
         audioEngine.play();
+        
+        mprisManager.setMetadata(track.filePath, track.title, track.artist, track.album !== undefined ? track.album : "", "", Math.floor(track.duration || 0));
 
         if (queueListView) {
             queueListView.positionViewAtIndex(currentQueueIndex, ListView.Beginning);
@@ -232,6 +240,28 @@ ApplicationWindow {
                 }
             }
         }
+        function onPlayingChanged(isPlaying) {
+            mprisManager.setPlaybackStatus(isPlaying);
+        }
+        function onPositionChanged(pos) {
+            mprisManager.setPosition(Math.floor(pos));
+        }
+    }
+
+    Connections {
+        target: mprisManager
+        function onNextRequested() {
+            if (currentQueueIndex >= 0 && currentQueueIndex < playbackQueue.length - 1) {
+                playTrackAtIndex(currentQueueIndex + 1);
+            }
+        }
+        function onPreviousRequested() {
+            if (currentQueueIndex > 0) {
+                playTrackAtIndex(currentQueueIndex - 1);
+            } else if (playbackQueue.length > 0) {
+                playTrackAtIndex(0);
+            }
+        }
     }
 
     Platform.FolderDialog {
@@ -242,9 +272,12 @@ ApplicationWindow {
         }
     }
 
-    // --- Global Keyboard Shortcuts ---
-    property real previousVolume: 1.0
+    // ======================================
+    // |==== Global Keyboard Shortcuts  ====|
+    // ======================================
 
+    property real previousVolume: 1.0
+    
     Shortcut {
         sequence: "Ctrl+Left"
         context: Qt.ApplicationShortcut
@@ -368,11 +401,18 @@ ApplicationWindow {
     property alias queueDrawer: appPopups.queueDrawer
     property alias queueListView: appPopups.queueListView
 
+    // =====================================
+    // |=====   Main Content Area      ====|
+    // =====================================
+
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
 
-        // Custom Title Bar
+        // =====================================
+        // |=====   Custom Title Bar     ======|
+        // =====================================
+
         Rectangle {
             id: titleBar
             Layout.fillWidth: true
@@ -380,7 +420,10 @@ ApplicationWindow {
             color: '#100f14'
             visible: !window.isFullScreen && launchMode === "Library"
 
+            // ===============================================
             // Drag Handler for moving the frameless window
+            // ===============================================
+
             DragHandler {
                 target: null
                 onActiveChanged: if (active)
@@ -403,7 +446,7 @@ ApplicationWindow {
 
                 Item {
                     Layout.fillWidth: true
-                } // spacer pushes buttons to the right
+                }
 
                 ToolButton {
                     icon.source: "qrc:/qml/icons/minimize.svg"
@@ -464,7 +507,10 @@ ApplicationWindow {
             }
         }
 
-        // Persistent Bottom Playback Bar
+        // =================================================
+        // |====    Persistent Bottom Playback Bar     ====|
+        // =================================================
+
         Rectangle {
             id: playbackBar
             Layout.fillWidth: true

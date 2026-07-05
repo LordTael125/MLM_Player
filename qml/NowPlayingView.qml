@@ -26,6 +26,7 @@ Item {
         z: 20
 
         DragHandler {
+            target: null
             onActiveChanged: if (active)
                 window.startSystemMove()
         }
@@ -60,7 +61,7 @@ Item {
                 Layout.preferredWidth: 30
                 Layout.preferredHeight: 30
                 onClicked: {
-                    if (window.visibility === Window.Maximized) {
+                    if (window.visibility === window.Maximized) {
                         window.showNormal();
                     } else {
                         window.showMaximized();

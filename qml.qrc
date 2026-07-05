@@ -7,5 +7,8 @@
         <file>qml/MinimalView.qml</file>
         <file>qml/GamepadControl.qml</file>
         <file>qml/AppPopups.qml</file>
+        <file>qml/PlaylistsView.qml</file>
+        <file>qml/PlaylistDetailsView.qml</file>
+        <file>qml/PlaylistPopup.qml</file>
     </qresource>
 </RCC>

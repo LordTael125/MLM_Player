@@ -34,6 +34,8 @@ QVariant TrackModel::data(const QModelIndex &index, int role) const {
     return track.filePath;
   case HasCoverArtRole:
     return track.hasCoverArt;
+  case TotalPlayTimeRole:
+    return track.totalPlayTime;
   }
 
   return QVariant();
@@ -48,6 +50,7 @@ QHash<int, QByteArray> TrackModel::roleNames() const {
   roles[DurationRole] = "duration";
   roles[FilePathRole] = "filePath";
   roles[HasCoverArtRole] = "hasCoverArt";
+  roles[TotalPlayTimeRole] = "totalPlayTime";
   return roles;
 }
 
@@ -71,10 +74,11 @@ QVariantMap TrackModel::getTrackByPath(const QString &filePath) const {
       map.insert("title", track.title);
       map.insert("artist", track.artist);
       map.insert("album", track.album);
-      map.insert("genre", track.genre);
-      map.insert("duration", track.duration);
-      map.insert("filePath", track.filePath);
-      map.insert("hasCoverArt", track.hasCoverArt);
+      map["genre"] = track.genre;
+      map["duration"] = track.duration;
+      map["filePath"] = track.filePath;
+      map["hasCoverArt"] = track.hasCoverArt;
+      map["totalPlayTime"] = track.totalPlayTime;
       return map;
     }
   }
@@ -144,6 +148,18 @@ void TrackModel::filterByArtist(const QString &artist) {
 
 void TrackModel::filterByAlbum(const QString &album) {
   updateDisplayIndices([album](const Track &t) { return t.album == album; });
+}
+
+QVariantList TrackModel::getAllTracks() const {
+  QVariantList list;
+  for (const Track &t : m_allTracks) {
+    QVariantMap map;
+    map["title"] = t.title;
+    map["artist"] = t.artist;
+    map["filePath"] = t.filePath;
+    list.append(map);
+  }
+  return list;
 }
 
 QVariantList TrackModel::getArtistTiles() const {
@@ -336,4 +352,68 @@ void TrackModel::filterByCollection(const QString &collection) {
             });
 
   endResetModel();
+}
+
+void TrackModel::filterByPlaylist(const QString &playlistName, const QStringList &playlistTracks) {
+  beginResetModel();
+  m_displayIndices.clear();
+  
+  // We need to keep the exact order of playlistTracks
+  for (const QString &trackPath : playlistTracks) {
+    for (int i = 0; i < m_allTracks.size(); ++i) {
+      if (m_allTracks[i].filePath == trackPath) {
+        m_displayIndices.append(i);
+        break;
+      }
+    }
+  }
+  
+  endResetModel();
+}
+
+void TrackModel::filterByMostPlayed(int limit) {
+  beginResetModel();
+  
+  // Sort tracks by play time descending
+  QVector<QPair<int, int>> timeAndIndex;
+  for (int i = 0; i < m_allTracks.size(); ++i) {
+    if (m_allTracks[i].totalPlayTime > 0) {
+      timeAndIndex.append({m_allTracks[i].totalPlayTime, i});
+    }
+  }
+  
+  std::sort(timeAndIndex.begin(), timeAndIndex.end(), 
+            [](const QPair<int, int>& a, const QPair<int, int>& b) {
+              return a.first > b.first; 
+            });
+            
+  m_displayIndices.clear();
+  int count = 0;
+  for (const auto& pair : timeAndIndex) {
+    if (count >= limit) break;
+    m_displayIndices.append(pair.second);
+    count++;
+  }
+  
+  endResetModel();
+}
+
+void TrackModel::updateTrackPlayTime(const QString &filePath, int addedTime) {
+  if (addedTime <= 0 || filePath.isEmpty()) return;
+
+  for (int i = 0; i < m_allTracks.size(); ++i) {
+    if (m_allTracks[i].filePath == filePath) {
+      m_allTracks[i].totalPlayTime += addedTime;
+      
+      // If it's currently displayed, notify view
+      for (int row = 0; row < m_displayIndices.size(); ++row) {
+        if (m_displayIndices[row] == i) {
+          QModelIndex idx = index(row, 0);
+          emit dataChanged(idx, idx, {TotalPlayTimeRole});
+          break;
+        }
+      }
+      break;
+    }
+  }
 }

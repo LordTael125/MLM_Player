@@ -16,7 +16,8 @@ public:
     GenreRole,
     DurationRole,
     FilePathRole,
-    HasCoverArtRole
+    HasCoverArtRole,
+    TotalPlayTimeRole
   };
 
   explicit TrackModel(QObject *parent = nullptr);
@@ -37,8 +38,12 @@ public slots:
   void filterByAlbum(const QString &album);
   void filterByFolder(const QString &folder);
   void filterByCollection(const QString &collection);
+  void filterByMostPlayed(int limit = 50);
+  void filterByPlaylist(const QString &playlistName, const QStringList &playlistTracks);
+  void updateTrackPlayTime(const QString &filePath, int addedTime);
 
   // Provide unique lists for the Tile UI
+  Q_INVOKABLE QVariantList getAllTracks() const;
   Q_INVOKABLE QVariantMap getTrackByPath(const QString &filePath) const;
   Q_INVOKABLE QVariantList getArtistTiles() const;
   Q_INVOKABLE QVariantList getAlbumTiles() const;

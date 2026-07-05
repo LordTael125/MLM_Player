@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(MusicPlayer VERSION 1.3.1 LANGUAGES CXX)
+project(MusicPlayer VERSION 1.3.2 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -11,7 +11,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 # Find Qt
-find_package(Qt5 COMPONENTS Core Gui Widgets Qml Quick Sql Concurrent Network REQUIRED)
+find_package(Qt5 COMPONENTS Core Gui Widgets Qml Quick Sql Concurrent Network DBus REQUIRED)
 
 # Find TagLib
 find_package(PkgConfig REQUIRED)
@@ -42,6 +42,10 @@ set(SOURCES
     include/cover_art_provider.h
     src/gamepad_controller.cpp
     include/gamepad_controller.h
+    src/playlist_manager.cpp
+    include/playlist_manager.h
+    src/mpris_manager.cpp
+    include/mpris_manager.h
 )
 
 # QML Resources
@@ -55,7 +59,7 @@ add_executable(MusicPlayer
 
 # Link Libraries
 target_link_libraries(MusicPlayer PRIVATE
-    Qt5::Core Qt5::Gui Qt5::Widgets Qt5::Qml Qt5::Quick Qt5::Sql Qt5::Concurrent Qt5::Network
+    Qt5::Core Qt5::Gui Qt5::Widgets Qt5::Qml Qt5::Quick Qt5::Sql Qt5::Concurrent Qt5::Network Qt5::DBus
     ${TAGLIB_LIBRARIES}
     ${SDL2_LIBRARIES}
     dl pthread m

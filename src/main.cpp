@@ -8,6 +8,8 @@
 #include "library_scanner.h"
 #include "track_model.h"
 #include "gamepad_controller.h"
+#include "playlist_manager.h"
+#include "mpris_manager.h"
 
 // TagLib includes
 #include <QtNetwork/QLocalServer>
@@ -49,17 +51,6 @@ int main(int argc, char *argv[]) {
   QStringList args = QCoreApplication::arguments();
   QStringList filepath = args.mid(1);
 
-  // Single Instance Interceptor
-  QLocalSocket socket;
-  socket.connectToServer("MLP_MusicPlayerIPC");
-  if (socket.waitForConnected(500)) {
-    if (!filepath.isEmpty()) {
-      socket.write(filepath.join('\n').toUtf8());
-      socket.waitForBytesWritten(1000);
-    }
-    return 0; // Exit successfully, yielding to the original process
-  }
-
   QString launchMode;
   if (filepath.isEmpty()) {
     launchMode = "Library";
@@ -67,6 +58,22 @@ int main(int argc, char *argv[]) {
     launchMode = "Minimal";
   } else {
     launchMode = "Queue";
+  }
+
+  // Single Instance Interceptor
+  bool isIpcServerRunning = false;
+  QLocalSocket socket;
+  socket.connectToServer("MLP_MusicPlayerIPC");
+  if (socket.waitForConnected(500)) {
+    isIpcServerRunning = true;
+    if (launchMode != "Library") {
+      if (!filepath.isEmpty()) {
+        socket.write(filepath.join('\n').toUtf8());
+        socket.waitForBytesWritten(1000);
+      }
+      return 0; // Exit successfully, yielding to the original process
+    }
+    socket.disconnectFromServer();
   }
 
   // Register Equalizer structure for QML so it can interact with the pointer
@@ -79,12 +86,30 @@ int main(int argc, char *argv[]) {
   LibraryScanner libraryScanner;
   TrackModel trackModel;
   GamepadController gamepad;
+  PlaylistManager playlistManager;
+  MprisManager mprisManager;
 
   // Connect scanner to model
   QObject::connect(&libraryScanner, &LibraryScanner::tracksAdded, &trackModel,
                    &TrackModel::setTracks);
   QObject::connect(&libraryScanner, &LibraryScanner::tracksAppended, &trackModel,
                    &TrackModel::addTracks);
+                   
+  QObject::connect(&audioEngine, &AudioEngine::playTimeAccumulated,
+                   &libraryScanner, &LibraryScanner::updatePlayTime);
+  QObject::connect(&audioEngine, &AudioEngine::playTimeAccumulated,
+                   &trackModel, &TrackModel::updateTrackPlayTime);
+                   
+  QObject::connect(&mprisManager, &MprisManager::playRequested, &audioEngine, &AudioEngine::play);
+  QObject::connect(&mprisManager, &MprisManager::pauseRequested, &audioEngine, &AudioEngine::pause);
+  QObject::connect(&mprisManager, &MprisManager::playPauseRequested, &audioEngine, [&audioEngine]() {
+    if (audioEngine.isPlaying()) audioEngine.pause();
+    else audioEngine.play();
+  });
+  QObject::connect(&mprisManager, &MprisManager::stopRequested, &audioEngine, &AudioEngine::stop);
+  QObject::connect(&mprisManager, &MprisManager::seekRequested, &audioEngine, [&audioEngine](int pos) {
+    audioEngine.setPosition(pos);
+  });
 
   if (launchMode == "Library") {
     libraryScanner.loadDatabase();
@@ -93,24 +118,26 @@ int main(int argc, char *argv[]) {
   }
 
   // Bind the IPC Server to catch new OS explorer hooks
-  QLocalServer::removeServer("MLP_MusicPlayerIPC");
-  QLocalServer *server = new QLocalServer(&app);
-  server->listen("MLP_MusicPlayerIPC");
-  QObject::connect(
-      server, &QLocalServer::newConnection, [&libraryScanner, server]() {
-        QLocalSocket *clientSocket = server->nextPendingConnection();
-        QObject::connect(clientSocket, &QLocalSocket::readyRead,
-                         [&libraryScanner, clientSocket]() {
-                           QByteArray data = clientSocket->readAll();
-                           QStringList newFiles = QString::fromUtf8(data).split(
-                               '\n', Qt::SkipEmptyParts);
-                           if (!newFiles.isEmpty()) {
-                             libraryScanner.appendSpecificFiles(newFiles);
-                           }
-                         });
-        QObject::connect(clientSocket, &QLocalSocket::disconnected,
-                         clientSocket, &QLocalSocket::deleteLater);
-      });
+  if (!isIpcServerRunning) {
+    QLocalServer::removeServer("MLP_MusicPlayerIPC");
+    QLocalServer *server = new QLocalServer(&app);
+    server->listen("MLP_MusicPlayerIPC");
+    QObject::connect(
+        server, &QLocalServer::newConnection, [&libraryScanner, server]() {
+          QLocalSocket *clientSocket = server->nextPendingConnection();
+          QObject::connect(clientSocket, &QLocalSocket::readyRead,
+                           [&libraryScanner, clientSocket]() {
+                             QByteArray data = clientSocket->readAll();
+                             QStringList newFiles = QString::fromUtf8(data).split(
+                                 '\n', Qt::SkipEmptyParts);
+                             if (!newFiles.isEmpty()) {
+                               libraryScanner.appendSpecificFiles(newFiles);
+                             }
+                           });
+          QObject::connect(clientSocket, &QLocalSocket::disconnected,
+                           clientSocket, &QLocalSocket::deleteLater);
+        });
+  }
 
   QQmlApplicationEngine engine;
   engine.addImageProvider(QLatin1String("musiccover"), new CoverArtProvider);
@@ -121,6 +148,8 @@ int main(int argc, char *argv[]) {
   engine.rootContext()->setContextProperty("libraryScanner", &libraryScanner);
   engine.rootContext()->setContextProperty("trackModel", &trackModel);
   engine.rootContext()->setContextProperty("gamepad", &gamepad);
+  engine.rootContext()->setContextProperty("playlistManager", &playlistManager);
+  engine.rootContext()->setContextProperty("mprisManager", &mprisManager);
 
   const QUrl url(QStringLiteral("qrc:/qml/main.qml"));
   QObject::connect(

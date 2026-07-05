@@ -59,6 +59,15 @@ Item {
         }
     }
 
+    function formatPlayTime(seconds) {
+        if (seconds <= 0) return "0s";
+        if (seconds <= 120) return seconds + "s";
+        let minutes = Math.floor(seconds / 60);
+        if (minutes <= 120) return minutes + "m";
+        let hours = Math.floor(minutes / 60);
+        return hours + "hr";
+    }
+
     function toggleSidebar() {
         isSidebarVisible = !isSidebarVisible;
         forceActiveContentFocus();
@@ -70,8 +79,11 @@ Item {
         anchors.fill: parent
         anchors.margins: 5
         spacing: 10
-
-        // Left sidebar for filters
+        
+        //  =======================================
+        // |===        Filter SideBar           ===|
+        //  =======================================
+        
         Rectangle {
             id: sidebarRect
             Layout.preferredWidth: isSidebarVisible ? 250 : 0
@@ -141,12 +153,16 @@ Item {
                             ctx: "Albums"
                         },
                         {
+                            name: "Collections",
+                            ctx: "Collections"
+                        },
+                        {
                             name: "Folders",
                             ctx: "Folders"
                         },
                         {
-                            name: "Collections",
-                            ctx: "Collections"
+                            name: "Most Played",
+                            ctx: "Most Played"
                         }
                     ]
 
@@ -180,14 +196,28 @@ Item {
                         }
 
                         function triggerAction() {
+                            var isAlreadyActive = (libraryView.categoryContext === modelData.ctx);
+                            
                             libraryView.activeCategoryName = modelData.name === "Tracks" ? "All Tracks" : modelData.name;
                             libraryView.categoryContext = modelData.ctx;
+                            
                             if (modelData.name === "Tracks")
                                 trackModel.filterAll();
-                            mainStack.clear();
-                            mainStack.push(unifiedCategoryView, {
-                                categoryType: modelData.name
-                            });
+                            else if (modelData.name === "Most Played")
+                                trackModel.filterByMostPlayed();
+                                
+                            if (!isAlreadyActive) {
+                                mainStack.clear();
+                                
+                                if (modelData.name === "Playlists") {
+                                    mainStack.push("qrc:/qml/PlaylistsView.qml");
+                                } else {
+                                    mainStack.push(unifiedCategoryView, {
+                                        categoryType: modelData.name
+                                    });
+                                }
+                            }
+                            
                             // Return focus to grid
                             var view = mainStack.currentItem;
                             if (view)
@@ -210,7 +240,10 @@ Item {
             }
         }
 
-        // Right side: Tile Grid view
+        //  =======================================
+        // |===        Main Right Side          ===|
+        //  =======================================
+        
         Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -275,14 +308,18 @@ Item {
         }
     }
 
+    //  ======================================
+    // |===      Unified Category          ===|
+    //  ======================================
+
     Component {
         id: unifiedCategoryView
 
         Item {
             id: categoryContainer
-            property string categoryType // "Tracks", "Artists", "Albums", "Folders", "Collections"
+            property string categoryType // "Tracks", "Artists", "Albums", "Folders", "Collections", "Most Played"
             property var activeModel: {
-                if (categoryType === "Tracks")
+                if (categoryType === "Tracks" || categoryType === "Most Played")
                     return trackModel;
                 if (categoryType === "Albums")
                     return trackModel.getAlbumTiles();
@@ -309,6 +346,11 @@ Item {
                 sourceComponent: libraryView.isListview ? listComp : gridComp
                 onLoaded: item.forceActiveFocus()
             }
+
+
+            //  =======================================
+            // |===        Grid Veiw Mode           ===|
+            //  =======================================
 
             Component {
                 id: gridComp
@@ -360,11 +402,15 @@ Item {
 
                         property bool isCurrentItem: GridView.isCurrentItem
 
-                        property bool isTrack: categoryContainer.categoryType === "Tracks"
+                        property bool isTrack: categoryContainer.categoryType === "Tracks" || categoryContainer.categoryType === "Most Played"
                         property string dTitle: isTrack ? model.title : modelData.name
                         property string dSubtitle: {
-                            if (isTrack)
+                            if (isTrack) {
+                                if (categoryContainer.categoryType === "Most Played") {
+                                    return model.artist + " • " + formatPlayTime(model.totalPlayTime);
+                                }
                                 return model.artist;
+                            }
                             if (categoryContainer.categoryType === "Folders")
                                 return "Directory";
                             if (categoryContainer.categoryType === "Collections")
@@ -478,6 +524,10 @@ Item {
                 }
             }
 
+            //  =======================================
+            // |===        List Veiw Mode           ===|
+            //  =======================================
+
             Component {
                 id: listComp
                 ListView {
@@ -524,11 +574,15 @@ Item {
 
                         property bool isCurrentItem: ListView.isCurrentItem
 
-                        property bool isTrack: categoryContainer.categoryType === "Tracks"
+                        property bool isTrack: categoryContainer.categoryType === "Tracks" || categoryContainer.categoryType === "Most Played"
                         property string dTitle: isTrack ? model.title : modelData.name
                         property string dSubtitle: {
-                            if (isTrack)
+                            if (isTrack) {
+                                if (categoryContainer.categoryType === "Most Played") {
+                                    return model.artist + " • " + formatPlayTime(model.totalPlayTime);
+                                }
                                 return model.artist;
+                            }
                             if (categoryContainer.categoryType === "Folders")
                                 return "Directory";
                             if (categoryContainer.categoryType === "Collections")
@@ -643,6 +697,7 @@ Item {
                     }
                 }
             }
+
         }
     }
 }

@@ -49,11 +49,25 @@ void LibraryScanner::initializeDatabase() {
                "filePath TEXT UNIQUE, "
                "hasCoverArt INTEGER, "
                "trackNumber INTEGER, "
-               "discNumber INTEGER)");
+               "discNumber INTEGER, "
+               "totalPlayTime INTEGER DEFAULT 0)");
 
     // Migration patch
     query.exec("ALTER TABLE tracks ADD COLUMN trackNumber INTEGER DEFAULT 0");
     query.exec("ALTER TABLE tracks ADD COLUMN discNumber INTEGER DEFAULT 0");
+    query.exec("ALTER TABLE tracks ADD COLUMN totalPlayTime INTEGER DEFAULT 0");
+
+    // Playlists tables
+    query.exec("CREATE TABLE IF NOT EXISTS playlists ("
+               "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+               "name TEXT UNIQUE)");
+               
+    query.exec("CREATE TABLE IF NOT EXISTS playlist_tracks ("
+               "playlist_id INTEGER, "
+               "track_path TEXT, "
+               "position INTEGER, "
+               "FOREIGN KEY(playlist_id) REFERENCES playlists(id))");
+               
   } else {
     qWarning() << "Failed to open database:" << db.lastError().text();
   }
@@ -62,7 +76,7 @@ void LibraryScanner::initializeDatabase() {
 void LibraryScanner::loadDatabase() {
   QVector<Track> loadedTracks;
   QSqlQuery query("SELECT title, artist, album, genre, duration, filePath, "
-                  "hasCoverArt, trackNumber, discNumber FROM tracks");
+                  "hasCoverArt, trackNumber, discNumber, totalPlayTime FROM tracks");
   while (query.next()) {
     Track t;
     t.title = query.value(0).toString();
@@ -74,6 +88,7 @@ void LibraryScanner::loadDatabase() {
     t.hasCoverArt = query.value(6).toBool();
     t.trackNumber = query.value(7).toInt();
     t.discNumber = query.value(8).toInt();
+    t.totalPlayTime = query.value(9).toInt();
     loadedTracks.append(t);
   }
   if (!loadedTracks.isEmpty()) {
@@ -207,8 +222,8 @@ void LibraryScanner::scanDirectory(const QString &directoryPath) {
         QSqlQuery insertQuery(db);
         insertQuery.prepare(
             "INSERT OR REPLACE INTO tracks (title, artist, album, "
-            "genre, duration, filePath, hasCoverArt, trackNumber, discNumber) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            "genre, duration, filePath, hasCoverArt, trackNumber, discNumber, totalPlayTime) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT totalPlayTime FROM tracks WHERE filePath = ?), 0))");
 
         for (const Track &t : newTracks) {
           insertQuery.bindValue(0, t.title);
@@ -220,6 +235,7 @@ void LibraryScanner::scanDirectory(const QString &directoryPath) {
           insertQuery.bindValue(6, t.hasCoverArt ? 1 : 0);
           insertQuery.bindValue(7, t.trackNumber);
           insertQuery.bindValue(8, t.discNumber);
+          insertQuery.bindValue(9, t.filePath);
           insertQuery.exec();
         }
         db.commit();
@@ -402,4 +418,28 @@ void LibraryScanner::appendSpecificFiles(const QStringList &filePaths) {
 
   m_tracks.append(newTracks);
   emit tracksAppended(newTracks);
+}
+
+void LibraryScanner::updatePlayTime(const QString &filePath, int secondsAdded) {
+  if (secondsAdded <= 0 || filePath.isEmpty()) return;
+  
+  // Update in memory
+  for (int i = 0; i < m_tracks.size(); ++i) {
+    if (m_tracks[i].filePath == filePath) {
+      m_tracks[i].totalPlayTime += secondsAdded;
+      break;
+    }
+  }
+  
+  // Update in DB
+  QSqlDatabase db = QSqlDatabase::database();
+  if (db.isOpen()) {
+    QSqlQuery query(db);
+    query.prepare("UPDATE tracks SET totalPlayTime = totalPlayTime + ? WHERE filePath = ?");
+    query.bindValue(0, secondsAdded);
+    query.bindValue(1, filePath);
+    if (!query.exec()) {
+      qWarning() << "Failed to update play time in DB:" << query.lastError().text();
+    }
+  }
 }
