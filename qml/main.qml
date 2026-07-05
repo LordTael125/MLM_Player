@@ -9,7 +9,7 @@ import QtGraphicalEffects 1.15
 
 ApplicationWindow {
     id: window
-    width: launchMode === "Library" ? 1260 : 800
+    width: launchMode === "Library" ? 1080 : 800
     height: launchMode === "Library" ? 768 : 350
     visible: true
     visibility: launchMode === "Library" ? Window.Maximized : Window.Windowed
@@ -87,6 +87,7 @@ ApplicationWindow {
             isFullScreen = true;
         }
     }
+    
 
     Settings {
         id: sessionSettings
@@ -424,28 +425,39 @@ ApplicationWindow {
             // Drag Handler for moving the frameless window
             // ===============================================
 
-            DragHandler {
-                target: null
-                onActiveChanged: if (active)
-                    window.startSystemMove()
-            }
-
             RowLayout {
                 anchors.fill: parent
                 Layout.leftMargin: 15
                 Layout.rightMargin: 10
                 spacing: 15
 
-                Label {
-                    Layout.leftMargin: 15
-                    text: window.title
-                    color: "white"
-                    font.bold: true
-                    font.pixelSize: 14
-                }
-
+                // Draggable Area (Label + Spacer)
                 Item {
                     Layout.fillWidth: true
+                    Layout.fillHeight: true
+
+                    DragHandler {
+                        target: null
+                        onActiveChanged: if (active)
+                            window.startSystemMove()
+                    }
+
+                    RowLayout {
+                        anchors.fill: parent
+                        spacing: 0
+
+                        Label {
+                            Layout.leftMargin: 15
+                            text: window.title
+                            color: "white"
+                            font.bold: true
+                            font.pixelSize: 14
+                        }
+
+                        Item {
+                            Layout.fillWidth: true
+                        }
+                    }
                 }
 
                 ToolButton {
@@ -473,6 +485,7 @@ ApplicationWindow {
                 }
 
                 ToolButton {
+                    Layout.rightMargin: 10
                     icon.source: "qrc:/qml/icons/close.svg"
                     icon.color: "white"
                     display: AbstractButton.IconOnly
@@ -692,6 +705,19 @@ ApplicationWindow {
                             from: 0
                             to: audioEngine.duration
                             value: audioEngine.position
+
+                            WheelHandler{
+                                id: seekBarWheelHandler
+                                onWheel: (event) => {
+                                    event.accepted = true;
+                                    if (event.angleDelta.y > 0) {
+                                        audioEngine.position += 5.0;
+                                    } else {
+                                        audioEngine.position -= 5.0;
+                                    }
+                                }
+                            }
+
                             onMoved: audioEngine.position = value
                         }
 
@@ -727,6 +753,26 @@ ApplicationWindow {
                             width: 35
                             height: 35
                             onClicked: window.showVolumePopup(this)
+
+                            WheelHandler {
+                                id: volumeWheelHandler
+                                onWheel: (event) => {
+                                    event.accepted = true;
+                                    if (event.angleDelta.y > 0) {
+                                        audioEngine.volume += 0.05;
+                                        if (audioEngine.volume > 1.0) {
+                                            audioEngine.volume = 1.0;
+                                        }
+                                        window.volumeOSDPopup.show(audioEngine.volume, "Volume");
+                                    } else {
+                                        audioEngine.volume -= 0.05;
+                                        if (audioEngine.volume < 0.0) {
+                                            audioEngine.volume = 0.0;
+                                        }
+                                        window.volumeOSDPopup.show(audioEngine.volume, "Volume");
+                                    }
+                                }
+                            }
                         }
 
                         ToolButton {

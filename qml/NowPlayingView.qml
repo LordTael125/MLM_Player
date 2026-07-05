@@ -195,6 +195,17 @@ Item {
                     value: audioEngine.position
                     focusPolicy: Qt.NoFocus
                     onMoved: audioEngine.position = value
+                    WheelHandler{
+                        id: seekBarWheelHandler
+                        onWheel: (event) => {
+                            event.accepted = true;
+                            if (event.angleDelta.y > 0) {
+                                audioEngine.position += 5.0;
+                            } else {
+                                audioEngine.position -= 5.0;
+                            }
+                        }
+                    }
                 }
 
                 Text {

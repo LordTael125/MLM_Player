@@ -77,6 +77,22 @@ Item {
                                     audioEngine.equalizer.setBandGain(index, value)
                                 }
                             }
+                            WheelHandler {
+                                onWheel: (event) => {
+                                    if (!audioEngine.equalizer) return;
+                                    if(eqSlider.enabled){
+                                    event.accepted = true;
+                                    
+                                    if (event.angleDelta.y > 0) {
+                                        eqSlider.value += 1.0; 
+                                        if(eqSlider.value > eqSlider.to) eqSlider.value = eqSlider.to;
+                                    } else {
+                                        eqSlider.value -= 1.0; 
+                                        if(eqSlider.value < eqSlider.from) eqSlider.value = eqSlider.from;
+                                        }
+                                    }
+                                }
+                            }
 
                             background: Rectangle {
                                 x: eqSlider.leftPadding + (eqSlider.availableWidth - width) / 2

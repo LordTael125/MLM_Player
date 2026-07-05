@@ -234,9 +234,6 @@ Item {
                         }
                     }
                 }
-                Item {
-                    Layout.fillHeight: true
-                } // spacer
             }
         }
 

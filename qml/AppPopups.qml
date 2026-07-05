@@ -517,6 +517,26 @@ Item {
                         audioEngine.volume = value;
                     volumeCloseTimer.restart();
                 }
+                  
+                WheelHandler {
+                    id: volumeWheelHandler
+                    onWheel: (event) => {
+                        event.accepted = true;
+                        if (event.angleDelta.y > 0) {
+                            audioEngine.volume += 0.05;
+                            if (audioEngine.volume > 1.0) {
+                                audioEngine.volume = 1.0;
+                                volumeCloseTimer.restart();
+                            }
+                        } else {
+                            audioEngine.volume -= 0.05;
+                            if (audioEngine.volume < 0.0) {
+                                audioEngine.volume = 0.0;
+                                volumeCloseTimer.restart();
+                            }
+                        }
+                    }
+                }
             }
         }
     }
