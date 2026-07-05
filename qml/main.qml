@@ -25,7 +25,7 @@ ApplicationWindow {
     property string currentPlayingTitle: "No Song Playing"
     property string currentPlayingArtist: ""
     property string currentPlayingPath: ""
-    property string applicationVersion: "1.3.1"
+    property string applicationVersion: "1.3.2"
     property bool currentPlayingHasCoverArt: false
     property var playbackQueue: []
     property int currentQueueIndex: -1
@@ -100,6 +100,10 @@ ApplicationWindow {
         property alias savedAllowRestore: window.allowRestore
         property alias savedRepeatMode: window.repeatMode
     }
+
+    //  ========================================
+    // |===      Restore Playtime            ===|
+    //  ========================================
 
     Timer {
         id: startupRestoreTimer
@@ -247,7 +251,7 @@ ApplicationWindow {
     // ======================================
 
     property real previousVolume: 1.0
-
+    
     Shortcut {
         sequence: "Ctrl+Left"
         context: Qt.ApplicationShortcut

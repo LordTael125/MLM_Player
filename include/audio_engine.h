@@ -41,6 +41,7 @@ signals:
   void volumeChanged(float volume);
   void playbackFinished();
   void errorOccurred(const QString &message);
+  void playTimeAccumulated(const QString &filePath, int seconds);
 
 private slots:
   void onEqualizerEnabledChanged(bool enabled);
@@ -59,6 +60,11 @@ private:
   Equalizer *m_equalizer{nullptr};
   ma_peak_node m_eqNodes[10];
   QTimer m_progressTimer;
+  QTimer m_playTimeTimer;
+  QString m_currentFilePath;
+  int m_accumulatedSeconds{0};
+  
+  void flushAccumulatedTime();
 };
 
 #endif // AUDIO_ENGINE_H

@@ -20,13 +20,23 @@ AudioEngine::AudioEngine(QObject *parent)
     if (m_soundLoaded) {
       if (ma_sound_at_end(&m_sound)) {
         stop();
-        emit playbackFinished();
+        emit this->playbackFinished();
       } else if (isPlaying()) {
-        emit positionChanged(position());
+        emit this->positionChanged(position());
       }
     }
   });
   m_progressTimer.start(250); // 250ms update interval
+
+  connect(&m_playTimeTimer, &QTimer::timeout, this, [this]() {
+    if (m_soundLoaded && isPlaying()) {
+      m_accumulatedSeconds++;
+      if (m_accumulatedSeconds >= 15) {
+        flushAccumulatedTime();
+      }
+    }
+  });
+  m_playTimeTimer.start(1000); // Check every second
 
   ma_node_graph *pGraph = ma_engine_get_node_graph(&m_engine);
   ma_uint32 channels = ma_engine_get_channels(&m_engine);
@@ -48,11 +58,19 @@ AudioEngine::AudioEngine(QObject *parent)
 }
 
 AudioEngine::~AudioEngine() {
+  flushAccumulatedTime();
   if (m_soundLoaded) {
     ma_sound_uninit(&m_sound);
   }
   if (m_isInitialized) {
     ma_engine_uninit(&m_engine);
+  }
+}
+
+void AudioEngine::flushAccumulatedTime() {
+  if (m_accumulatedSeconds > 0 && !m_currentFilePath.isEmpty()) {
+    emit playTimeAccumulated(m_currentFilePath, m_accumulatedSeconds);
+    m_accumulatedSeconds = 0;
   }
 }
 
@@ -83,10 +101,14 @@ void AudioEngine::loadFile(const QString &filePath) {
   if (!m_isInitialized)
     return;
 
+  flushAccumulatedTime();
+
   if (m_soundLoaded) {
     ma_sound_uninit(&m_sound);
     m_soundLoaded = false;
   }
+
+  m_currentFilePath = filePath;
 
   ma_result result = ma_sound_init_from_file(
       &m_engine, filePath.toUtf8().constData(),
@@ -131,6 +153,7 @@ void AudioEngine::stop() {
     ma_sound_seek_to_pcm_frame(&m_sound, 0);
     emit playingChanged(false);
   }
+  flushAccumulatedTime();
   emit positionChanged(0.0f);
 }
 

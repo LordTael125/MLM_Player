@@ -8,6 +8,7 @@
 #include "library_scanner.h"
 #include "track_model.h"
 #include "gamepad_controller.h"
+#include "playlist_manager.h"
 
 // TagLib includes
 #include <QtNetwork/QLocalServer>
@@ -84,12 +85,18 @@ int main(int argc, char *argv[]) {
   LibraryScanner libraryScanner;
   TrackModel trackModel;
   GamepadController gamepad;
+  PlaylistManager playlistManager;
 
   // Connect scanner to model
   QObject::connect(&libraryScanner, &LibraryScanner::tracksAdded, &trackModel,
                    &TrackModel::setTracks);
   QObject::connect(&libraryScanner, &LibraryScanner::tracksAppended, &trackModel,
                    &TrackModel::addTracks);
+                   
+  QObject::connect(&audioEngine, &AudioEngine::playTimeAccumulated,
+                   &libraryScanner, &LibraryScanner::updatePlayTime);
+  QObject::connect(&audioEngine, &AudioEngine::playTimeAccumulated,
+                   &trackModel, &TrackModel::updateTrackPlayTime);
 
   if (launchMode == "Library") {
     libraryScanner.loadDatabase();
@@ -128,6 +135,7 @@ int main(int argc, char *argv[]) {
   engine.rootContext()->setContextProperty("libraryScanner", &libraryScanner);
   engine.rootContext()->setContextProperty("trackModel", &trackModel);
   engine.rootContext()->setContextProperty("gamepad", &gamepad);
+  engine.rootContext()->setContextProperty("playlistManager", &playlistManager);
 
   const QUrl url(QStringLiteral("qrc:/qml/main.qml"));
   QObject::connect(

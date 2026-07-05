@@ -13,6 +13,7 @@ struct Track {
   bool hasCoverArt{false};
   int trackNumber{0};
   int discNumber{0};
+  int totalPlayTime{0}; // in seconds
 };
 
 #endif // TRACK_H

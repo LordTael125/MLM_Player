@@ -21,6 +21,7 @@ public slots:
   void appendSpecificFiles(const QStringList &filePaths);
   void loadDatabase();
   void clearDatabase();
+  void updatePlayTime(const QString &filePath, int secondsAdded);
 
 signals:
   void scanStarted();

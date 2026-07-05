@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(MusicPlayer VERSION 1.3.1 LANGUAGES CXX)
+project(MusicPlayer VERSION 1.3.2 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -42,6 +42,8 @@ set(SOURCES
     include/cover_art_provider.h
     src/gamepad_controller.cpp
     include/gamepad_controller.h
+    src/playlist_manager.cpp
+    include/playlist_manager.h
 )
 
 # QML Resources
