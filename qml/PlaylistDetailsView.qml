@@ -43,10 +43,7 @@ Item {
                     verticalAlignment: Text.AlignVCenter
                 }
                 onClicked: {
-                    var popup = Qt.createComponent("qrc:/qml/PlaylistPopup.qml").createObject(libraryView, {
-                        playlistName: playlistDetailsRoot.playlistName
-                    });
-                    popup.open();
+                    openAddPopup(playlistManager, playlistDetailsRoot.playlistName);
                 }
             }
 

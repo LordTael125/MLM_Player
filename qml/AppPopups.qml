@@ -517,6 +517,26 @@ Item {
                         audioEngine.volume = value;
                     volumeCloseTimer.restart();
                 }
+                  
+                WheelHandler {
+                    id: volumeWheelHandler
+                    onWheel: (event) => {
+                        event.accepted = true;
+                        if (event.angleDelta.y > 0) {
+                            audioEngine.volume += 0.05;
+                            if (audioEngine.volume > 1.0) {
+                                audioEngine.volume = 1.0;
+                                volumeCloseTimer.restart();
+                            }
+                        } else {
+                            audioEngine.volume -= 0.05;
+                            if (audioEngine.volume < 0.0) {
+                                audioEngine.volume = 0.0;
+                                volumeCloseTimer.restart();
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -1060,5 +1080,24 @@ Item {
                 }
             }
         }
+    }
+    // ==========================================
+    // 9. Playlist Popups
+    // ==========================================
+    PlaylistPopup {
+        id: playlistPopupsInst
+        playlistManager: typeof window !== "undefined" && window.playlistManager ? window.playlistManager : null
+    }
+
+    property alias addPopup: playlistPopupsInst.addPopup
+    property alias playlistMenuPopup: playlistPopupsInst.playlistMenuPopup
+    property alias createPlaylistPopup: playlistPopupsInst.createPlaylistPopup
+    
+    function openAddPopup(manager, name) {
+        playlistPopupsInst.openAddPopup(manager, name);
+    }
+    
+    function openCreatePlaylistPopup(manager) {
+        playlistPopupsInst.openCreatePlaylistPopup(manager);
     }
 }

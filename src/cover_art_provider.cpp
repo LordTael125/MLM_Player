@@ -31,6 +31,19 @@ QImage CoverArtProvider::requestImage(const QString &id, QSize *size,
     return image;
   };
 
+  image = extractImageFromTag(filePath);
+
+  if (image.isNull()) {
+    // Create a basic fallback placeholder
+    image = QImage(200, 200, QImage::Format_RGB32);
+    image.fill(QColor("#33333b"));
+  }
+
+  return returnImage();
+}
+
+QImage CoverArtProvider::extractImageFromTag(const QString &filePath) {
+  QImage image;
   if (filePath.endsWith(".mp3", Qt::CaseInsensitive)) {
     TagLib::MPEG::File mpegFile(filePath.toUtf8().constData());
     if (mpegFile.hasID3v2Tag()) {
@@ -66,12 +79,5 @@ QImage CoverArtProvider::requestImage(const QString &id, QSize *size,
       }
     }
   }
-
-  if (image.isNull()) {
-    // Create a basic fallback placeholder
-    image = QImage(200, 200, QImage::Format_RGB32);
-    image.fill(QColor("#33333b"));
-  }
-
-  return returnImage();
+  return image;
 }
