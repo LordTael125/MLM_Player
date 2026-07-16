@@ -1081,4 +1081,23 @@ Item {
             }
         }
     }
+    // ==========================================
+    // 9. Playlist Popups
+    // ==========================================
+    PlaylistPopup {
+        id: playlistPopupsInst
+        playlistManager: typeof window !== "undefined" && window.playlistManager ? window.playlistManager : null
+    }
+
+    property alias addPopup: playlistPopupsInst.addPopup
+    property alias playlistMenuPopup: playlistPopupsInst.playlistMenuPopup
+    property alias createPlaylistPopup: playlistPopupsInst.createPlaylistPopup
+    
+    function openAddPopup(manager, name) {
+        playlistPopupsInst.openAddPopup(manager, name);
+    }
+    
+    function openCreatePlaylistPopup(manager) {
+        playlistPopupsInst.openCreatePlaylistPopup(manager);
+    }
 }

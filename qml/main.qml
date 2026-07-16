@@ -401,6 +401,21 @@ ApplicationWindow {
     property alias scanningPopup: appPopups.scanningPopup
     property alias queueDrawer: appPopups.queueDrawer
     property alias queueListView: appPopups.queueListView
+    property alias addPopup: appPopups.addPopup
+    property alias playlistMenuPopup: appPopups.playlistMenuPopup
+    property alias createPlaylistPopup: appPopups.createPlaylistPopup
+
+    function openAddPopup(manager, name) {
+        appPopups.openAddPopup(manager, name);
+    }
+    
+    function openCreatePlaylistPopup(manager) {
+        appPopups.openCreatePlaylistPopup(manager);
+    }
+
+    function openPlaylistMenuPopup(manager) {
+        appPopups.openPlaylistMenuPopup(manager);
+    }
 
     // =====================================
     // |=====   Main Content Area      ====|

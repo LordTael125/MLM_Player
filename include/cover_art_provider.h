@@ -10,6 +10,8 @@ public:
 
   QImage requestImage(const QString &id, QSize *size,
                       const QSize &requestedSize) override;
+
+  static QImage extractImageFromTag(const QString &filePath);
 };
 
 #endif // COVER_ART_PROVIDER_H

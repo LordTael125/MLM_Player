@@ -238,6 +238,34 @@ void LibraryScanner::scanDirectory(const QString &directoryPath) {
           insertQuery.bindValue(9, t.filePath);
           insertQuery.exec();
         }
+
+        // Clean up deleted files
+        QSqlQuery cleanupQuery(db);
+        QString searchPath = path;
+        if (!searchPath.endsWith('/')) {
+            searchPath += '/';
+        }
+        cleanupQuery.prepare("SELECT filePath FROM tracks WHERE filePath LIKE ?");
+        cleanupQuery.bindValue(0, searchPath + "%");
+        cleanupQuery.exec();
+
+        QStringList toDelete;
+        while (cleanupQuery.next()) {
+            QString fp = cleanupQuery.value(0).toString();
+            if (!QFile::exists(fp)) {
+                toDelete.append(fp);
+            }
+        }
+
+        if (!toDelete.isEmpty()) {
+            QSqlQuery deleteQuery(db);
+            deleteQuery.prepare("DELETE FROM tracks WHERE filePath = ?");
+            for (const QString &fp : toDelete) {
+                deleteQuery.bindValue(0, fp);
+                deleteQuery.exec();
+            }
+        }
+
         db.commit();
       }
     }

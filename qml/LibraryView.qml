@@ -164,6 +164,10 @@ Item {
                             name: "Most Played",
                             ctx: "Most Played"
                         }
+                        // {
+                        //     name: "Playlists",
+                        //     ctx: "Playlists"
+                        // }
                     ]
 
                     delegate: ItemDelegate {
@@ -275,6 +279,16 @@ Item {
                         font.bold: true
                         color: "white"
                         Layout.fillWidth: true
+                    }
+
+                    Button {
+                        text: "Create"
+                        visible: libraryView.activeCategoryName === "Playlists"
+                        background: Rectangle { color: "#0078d7"; radius: 6 }
+                        contentItem: Text { text: parent.text; color: "white"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        onClicked: {
+                            openCreatePlaylistPopup(playlistManager);
+                        }
                     }
 
                     ToolButton {
