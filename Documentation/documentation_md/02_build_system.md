@@ -20,9 +20,9 @@ cmake_minimum_required(VERSION 3.16)
 > Declares the minimum CMake version required. 3.16 introduced `qt5_add_resources` improvements.
 
 ```cmake
-project(MusicPlayer VERSION 1.0 LANGUAGES CXX)
+project(MusicPlayer VERSION 1.3.2 LANGUAGES CXX)
 ```
-> Declares the project name `MusicPlayer`, version `1.0`, and that only C++ code is used.
+> Declares the project name `MusicPlayer`, version `1.3.2`, and that only C++ code is used.
 
 ```cmake
 set(CMAKE_CXX_STANDARD 17)
@@ -46,7 +46,7 @@ set(CMAKE_AUTOUIC ON)
 > - `AUTOUIC`: Auto-processes `.ui` files (we don't use these, but it's good practice to enable).
 
 ```cmake
-find_package(Qt5 COMPONENTS Core Gui Widgets Qml Quick Sql Concurrent Network REQUIRED)
+find_package(Qt5 COMPONENTS Core Gui Widgets Qml Quick Sql Concurrent Network DBus REQUIRED)
 ```
 > Finds the Qt5 installation on your system and enables the specified **modules**:
 >
@@ -60,31 +60,40 @@ find_package(Qt5 COMPONENTS Core Gui Widgets Qml Quick Sql Concurrent Network RE
 > | `Sql` | QSqlDatabase, QSqlQuery (SQLite) |
 > | `Concurrent` | QtConcurrent::run() — background threads |
 > | `Network` | QLocalServer, QLocalSocket — single-instance IPC |
+> | `DBus` | QDBusConnection, QDBusAbstractAdaptor — MPRIS2 integration |
 
 ```cmake
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(TAGLIB REQUIRED taglib)
+pkg_check_modules(SDL2 REQUIRED sdl2)
 ```
-> Finds **TagLib** using the system's `pkg-config` tool. This sets `TAGLIB_INCLUDE_DIRS` and `TAGLIB_LIBRARIES` variables for us.
+> Finds **TagLib** and **SDL2** using the system's `pkg-config` tool. This sets `TAGLIB_INCLUDE_DIRS`, `TAGLIB_LIBRARIES`, `SDL2_INCLUDE_DIRS`, and `SDL2_LIBRARIES` variables.
 
 ```cmake
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party
     ${TAGLIB_INCLUDE_DIRS}
+    ${SDL2_INCLUDE_DIRS}
 )
 ```
 > Tells the compiler where to find `.h` headers:
 > - `include/` — our own headers
 > - `third_party/` — where `miniaudio.h` lives
-> - TagLib's system headers
+> - TagLib's and SDL2's system headers
 
 ```cmake
 set(SOURCES
     src/main.cpp
-    src/audio_engine.cpp
-    include/audio_engine.h
-    ...
+    src/audio_engine.cpp     include/audio_engine.h
+    src/equalizer.cpp        include/equalizer.h
+    src/library_scanner.cpp  include/library_scanner.h
+    include/track.h
+    src/track_model.cpp      include/track_model.h
+    src/cover_art_provider.cpp include/cover_art_provider.h
+    src/gamepad_controller.cpp include/gamepad_controller.h
+    src/playlist_manager.cpp include/playlist_manager.h
+    src/mpris_manager.cpp    include/mpris_manager.h
 )
 ```
 > Lists every source file. **Note**: headers are listed here too. This is not strictly required for compilation, but it helps IDE tools (like Qt Creator) discover and show them.
@@ -101,14 +110,17 @@ add_executable(MusicPlayer ${SOURCES} ${RESOURCES})
 
 ```cmake
 target_link_libraries(MusicPlayer PRIVATE
-    Qt5::Core Qt5::Gui Qt5::Widgets Qt5::Qml Qt5::Quick Qt5::Sql Qt5::Concurrent
+    Qt5::Core Qt5::Gui Qt5::Widgets Qt5::Qml Qt5::Quick Qt5::Sql
+    Qt5::Concurrent Qt5::Network Qt5::DBus
     ${TAGLIB_LIBRARIES}
+    ${SDL2_LIBRARIES}
     dl pthread m
 )
 ```
 > Links the executable against:
-> - All Qt5 modules including `Qt5::Network` (for IPC)
-> - TagLib
+> - All Qt5 modules including `Qt5::Network` (IPC) and `Qt5::DBus` (MPRIS2)
+> - TagLib (audio tag reading)
+> - SDL2 (gamepad input)
 > - `dl` (dynamic linker, needed by miniaudio for `dlopen`)
 > - `pthread` (POSIX threads, needed by miniaudio)
 > - `m` (math library, `libm`, for `sin`, `cos`, `fmaxf` in the equalizer)

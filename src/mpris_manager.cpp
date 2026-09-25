@@ -7,6 +7,7 @@
 #include <QDir>
 #include <QUrl>
 #include <QImage>
+#include <QCryptographicHash>
 
 MprisRootAdaptor::MprisRootAdaptor(MprisManager *parent)
     : QDBusAbstractAdaptor(parent) {}
@@ -56,7 +57,8 @@ void MprisManager::setMetadata(const QString &id, const QString &title,
       QImage cover = CoverArtProvider::extractImageFromTag(id);
       if (!cover.isNull()) {
           QString tempDir = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
-          QString tempFile = tempDir + "/mlm_mpris_cover.png";
+          QString hash = QCryptographicHash::hash(id.toUtf8(), QCryptographicHash::Md5).toHex();
+          QString tempFile = tempDir + "/mlm_mpris_cover_" + hash + ".png";
           cover.save(tempFile, "PNG");
           finalArtUrl = "file://" + tempFile;
       }

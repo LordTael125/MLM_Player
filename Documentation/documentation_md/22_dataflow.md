@@ -1,10 +1,10 @@
-# Chapter 14 — Complete System Dataflow
+# Chapter 22 — Complete System Dataflow
 
 This chapter ties everything together with detailed data flow diagrams covering the three major user journeys.
 
 ---
 
-## 14.1 Application Startup Flow
+## 22.1 Application Startup Flow
 
 - **Program starts** &rarr; `main()` runs
   - `[TagLib]` Silence debug output
@@ -54,7 +54,7 @@ This chapter ties everything together with detailed data flow diagrams covering 
 
 ---
 
-## 14.2 "Scan Directory" Flow
+## 22.2 "Scan Directory" Flow
 
 ```
 User: clicks hamburger menu → "Scan Directory"
@@ -100,7 +100,7 @@ User: clicks hamburger menu → "Scan Directory"
 
 ---
 
-## 14.3 "Play a Song" Flow
+## 22.3 "Play a Song" Flow
 
 ```
 User: clicks a track tile in LibraryView
@@ -137,7 +137,7 @@ User: clicks a track tile in LibraryView
 
 ---
 
-## 14.4 "Seek to Position" Flow
+## 22.4 "Seek to Position" Flow
 
 - **User drags the progress slider to new position**
   - `[QML Slider.onMoved]`
@@ -151,7 +151,7 @@ User: clicks a track tile in LibraryView
 
 ---
 
-## 14.5 "Change EQ Band" Flow
+## 22.5 "Change EQ Band" Flow
 
 - **User moves EQ slider for band 5 (1kHz)**
   - `[QML EqualizerView Slider.onMoved]`
@@ -172,7 +172,7 @@ User: clicks a track tile in LibraryView
 
 ---
 
-## 14.6 Class Dependency Map
+## 22.6 Class Dependency Map
 
 - `main.cpp`
   - creates: `AudioEngine`
@@ -203,7 +203,7 @@ User: clicks a track tile in LibraryView
 
 ---
 
-## 14.7 IPC — Secondary Launch → Queue Update Flow
+## 22.7 IPC — Secondary Launch → Queue Update Flow
 
 - **User selects 3 audio files in file manager and double-clicks to open**
   - OS spawns `Process 2` (and possibly 3, 4...) with file paths as `argv`

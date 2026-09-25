@@ -21,12 +21,15 @@ struct Track {
     bool hasCoverArt{false};// Does the file have an embedded album image?
     int trackNumber{0};     // Track # on disc (1, 2, 3...)
     int discNumber{0};      // Disc number for multi-disc albums
+    int totalPlayTime{0};   // Cumulative seconds this track has been played
 };
 
 #endif // TRACK_H
 ```
 
 This is a **plain struct** — no QObject, no signals, no methods. It is a pure data container. The `{0}` and `{false}` are **in-class member initializers** (C++11), meaning the values default to zero/false if not set.
+
+The `totalPlayTime` field tracks how many total seconds a user has spent listening to this track. It is persisted in the SQLite database and updated in real-time by the `AudioEngine::playTimeAccumulated` signal (see Chapter 12).
 
 `QVector<Track>` is then the fundamental collection: the entire music library is a vector of these structs.
 
@@ -61,7 +64,8 @@ public:
         GenreRole,                         // 260
         DurationRole,                      // 261
         FilePathRole,                      // 262
-        HasCoverArtRole                    // 263
+        HasCoverArtRole,                   // 263
+        TotalPlayTimeRole                  // 264
     };
 
     explicit TrackModel(QObject *parent = nullptr);
@@ -82,7 +86,12 @@ public slots:
     void filterByAlbum(const QString &album);
     void filterByFolder(const QString &folder);
     void filterByCollection(const QString &collection);
+    void filterByMostPlayed(int limit = 50);
+    void filterByPlaylist(const QString &playlistName, const QStringList &playlistTracks);
+    void updateTrackPlayTime(const QString &filePath, int addedTime);
 
+    Q_INVOKABLE QVariantList getAllTracks() const;
+    Q_INVOKABLE QVariantMap getTrackByPath(const QString &filePath) const;
     Q_INVOKABLE QVariantList getArtistTiles() const;
     Q_INVOKABLE QVariantList getAlbumTiles() const;
     Q_INVOKABLE QVariantList getFolderTiles() const;
@@ -289,3 +298,78 @@ QVariantList TrackModel::getArtistTiles() const {
 ```
 
 QML receives a JavaScript array of objects: `[ {name: "Queen", hasCoverArt: true, filePath: "..."}, ... ]`.
+
+---
+
+## 4.9 New Filter Methods
+
+### `filterByMostPlayed` — Sort by Play Time
+
+```cpp
+void TrackModel::filterByMostPlayed(int limit) {
+    beginResetModel();
+    m_displayIndices.clear();
+
+    // Collect indices with non-zero play time
+    QVector<QPair<int, int>> indexAndTime;
+    for (int i = 0; i < m_allTracks.size(); ++i) {
+        if (m_allTracks[i].totalPlayTime > 0)
+            indexAndTime.append({i, m_allTracks[i].totalPlayTime});
+    }
+
+    // Sort descending by play time
+    std::sort(indexAndTime.begin(), indexAndTime.end(),
+              [](const auto &a, const auto &b) { return a.second > b.second; });
+
+    for (int i = 0; i < qMin(limit, indexAndTime.size()); ++i)
+        m_displayIndices.append(indexAndTime[i].first);
+
+    endResetModel();
+}
+```
+
+This filters and sorts the display to show only tracks with recorded play time, ordered by most-played first. The `limit` parameter caps the results (default: 50).
+
+### `filterByPlaylist` — Show Playlist Contents
+
+```cpp
+void TrackModel::filterByPlaylist(const QString &playlistName, const QStringList &playlistTracks) {
+    updateDisplayIndices([&playlistTracks](const Track &t) {
+        return playlistTracks.contains(t.filePath);
+    });
+}
+```
+
+Filters the display to show only tracks whose file paths appear in the provided playlist track list.
+
+### `updateTrackPlayTime` — Live Play-Time Updates
+
+```cpp
+void TrackModel::updateTrackPlayTime(const QString &filePath, int addedTime) {
+    for (int i = 0; i < m_allTracks.size(); ++i) {
+        if (m_allTracks[i].filePath == filePath) {
+            m_allTracks[i].totalPlayTime += addedTime;
+            break;
+        }
+    }
+}
+```
+
+This slot is connected to `AudioEngine::playTimeAccumulated` in `main.cpp`. It keeps the in-memory model in sync with database updates, so the "Most Played" filter reflects current play counts without requiring a restart.
+
+### `getAllTracks` — Full Track List for Popups
+
+```cpp
+Q_INVOKABLE QVariantList getAllTracks() const;
+```
+
+Returns every track in the library as a JavaScript array. Used by the playlist "Add Content" popup to display all available tracks regardless of the current filter.
+
+### `getTrackByPath` — Lookup a Single Track
+
+```cpp
+Q_INVOKABLE QVariantMap getTrackByPath(const QString &filePath) const;
+```
+
+Returns metadata for a specific track given its file path. Used to populate the queue and playback UI when only a file path is known.
+

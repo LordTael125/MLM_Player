@@ -1,4 +1,4 @@
-# Chapter 11 — main.qml: The Root Window
+# Chapter 14 — main.qml: The Root Window
 
 `main.qml` is the root of the entire UI. It is over 1300 lines and contains:
 - The `ApplicationWindow` (the OS window)
@@ -12,7 +12,7 @@
 
 ---
 
-## 11.1 ApplicationWindow and Frameless Mode
+## 14.1 ApplicationWindow and Frameless Mode
 
 ```qml
 ApplicationWindow {
@@ -36,7 +36,7 @@ In **Library mode**, the window starts maximised at 1260×768. In **Minimal** or
 
 ---
 
-## 11.2 Global State Properties
+## 14.2 Global State Properties
 
 ```qml
 // These are visible to ALL child QML files (LibraryView, NowPlayingView, MinimalView etc.)
@@ -58,7 +58,7 @@ Note that `repeatMode` is an **integer with three states**, not a boolean:
 
 ---
 
-## 11.3 playTrackAtIndex — The Core Playback Function
+## 14.3 playTrackAtIndex — The Core Playback Function
 
 ```qml
 function playTrackAtIndex(idx, contextCategory) {
@@ -100,7 +100,7 @@ function playTrackAtIndex(idx, contextCategory) {
 
 ---
 
-## 11.4 Auto-Advance on Track End
+## 14.4 Auto-Advance on Track End
 
 ```qml
 Connections {
@@ -129,7 +129,7 @@ This runs every time miniaudio signals that a track has ended (the 250ms timer i
 
 ---
 
-## 11.5 The Custom Title Bar
+## 14.5 The Custom Title Bar
 
 ```qml
 Rectangle {
@@ -181,7 +181,7 @@ Rectangle {
 
 ---
 
-## 11.6 The Keyboard Shortcut System
+## 14.6 The Keyboard Shortcut System
 
 ```qml
 // All shortcuts use Qt.ApplicationShortcut — they fire even when
@@ -256,7 +256,7 @@ Shortcut { sequence: "Ctrl+Q";      context: Qt.ApplicationShortcut
 
 ---
 
-## 11.7 The Bottom Playback Bar
+## 14.7 The Bottom Playback Bar
 
 The bottom playback bar is **only visible in Library mode** (hidden in Minimal/Queue modes where `MinimalView` handles its own controls). It uses a three-section layout inside a `Rectangle` (90px tall):
 
@@ -291,7 +291,7 @@ onClicked: {
 
 ---
 
-## 11.8 The Queue Drawer
+## 14.8 The Queue Drawer
 
 ```qml
 Drawer {
@@ -332,7 +332,7 @@ Drawer {
 
 ---
 
-## 11.9 Session Persistence
+## 14.9 Session Persistence
 
 `main.qml` uses `Qt.labs.settings` (`QSettings` under the hood) to remember the user's listening state across restarts:
 

@@ -1,6 +1,6 @@
-# Chapter 12 — LibraryView.qml: The Main Library Browser
+# Chapter 15 — LibraryView.qml: The Main Library Browser
 
-## 12.1 Overview
+## 15.1 Overview
 
 `LibraryView.qml` is the heart of the application's UI. It shows the user's music library in a tiled grid layout with a collapsible left sidebar for category filtering. It has 5 view modes:
 
@@ -14,7 +14,7 @@
 
 ---
 
-## 12.2 The Component Layout
+## 15.2 The Component Layout
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -38,7 +38,7 @@
 
 ---
 
-## 12.3 State Properties
+## 15.3 State Properties
 
 ```qml
 Item {
@@ -52,7 +52,7 @@ These three properties drive the entire view. When `categoryContext` changes, th
 
 ---
 
-## 12.4 The Collapsible Sidebar
+## 15.4 The Collapsible Sidebar
 
 ```qml
 Rectangle {
@@ -110,7 +110,7 @@ Rectangle {
 
 ---
 
-## 12.5 StackView — Navigation
+## 15.5 StackView — Navigation
 
 `StackView` provides the drill-down navigation. Think of it as a stack of pages: push to go deeper, pop to go back.
 
@@ -145,7 +145,7 @@ ToolButton {
 
 ---
 
-## 12.6 The Track Grid (trackGridComponent)
+## 15.6 The Track Grid (trackGridComponent)
 
 ```qml
 Component {
@@ -205,7 +205,7 @@ Component {
 
 ---
 
-## 12.7 The Artist Grid — Circular Tiles
+## 15.7 The Artist Grid — Circular Tiles
 
 Artists use circular images (a design convention for artist portraits):
 
@@ -232,7 +232,7 @@ onClicked: {
 
 ---
 
-## 12.8 `model` vs `modelData` Explained
+## 15.8 `model` vs `modelData` Explained
 
 Inside a delegate that uses a **C++ QAbstractListModel**, you access roles by name directly:
 ```qml
@@ -254,7 +254,7 @@ This distinction is a common source of confusion in QML.
 
 ---
 
-## 12.9 Navigation Flow Summary
+## 15.9 Navigation Flow Summary
 
 ```
 User selects "Artists" in sidebar

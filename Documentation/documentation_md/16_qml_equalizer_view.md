@@ -1,6 +1,6 @@
-# Chapter 13 — EqualizerView.qml and NowPlayingView.qml
+# Chapter 16 — EqualizerView.qml and NowPlayingView.qml
 
-## 13.1 EqualizerView.qml
+## 16.1 EqualizerView.qml
 
 The Equalizer view is hosted in a `Popup` in `main.qml`. It provides:
 - 10 vertical sliders (one per EQ band)
@@ -108,7 +108,7 @@ User drags slider for 1kHz band
 
 ---
 
-## 13.2 NowPlayingView.qml
+## 16.2 NowPlayingView.qml
 
 This is a full-screen overlay (shown when you click the expand button in the playback bar). It provides a cinematic "Now Playing" experience:
 
@@ -176,7 +176,7 @@ Key concept: `NowPlayingView` reads from `window.currentPlayingTitle`, `window.c
 
 ---
 
-## 13.3 The `Connections` Pattern — Updating the EQ Sliders
+## 16.3 The `Connections` Pattern — Updating the EQ Sliders
 
 When the user selects a preset like "Rock", `Equalizer::loadPreset("Rock")` calls `setBandGain(i, value)` for all 10 bands. Each call emits `bandGainChanged`. The QML sliders need to reflect these changes.
 
@@ -193,7 +193,7 @@ BUT: When the user drags the slider, `value` changes and triggers `onMoved` → 
 
 ---
 
-## 13.4 Avoiding Binding Loops
+## 16.4 Avoiding Binding Loops
 
 A **binding loop** would be:
 ```qml

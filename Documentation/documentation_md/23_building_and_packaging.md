@@ -1,6 +1,6 @@
-# Chapter 15 — Building, Running, and Packaging
+# Chapter 23 — Building, Running, and Packaging
 
-## 15.1 Development Build (Linux)
+## 23.1 Development Build (Linux)
 
 ### Prerequisites
 ```bash
@@ -37,7 +37,7 @@ make -j$(nproc)
 
 ---
 
-## 15.2 Common Build Errors and Fixes
+## 23.2 Common Build Errors and Fixes
 
 ### Error: `Qt5 not found`
 ```
@@ -70,7 +70,7 @@ sudo apt install libqt5sql5-sqlite
 
 ---
 
-## 15.3 Project File Structure for IDE (Qt Creator)
+## 23.3 Project File Structure for IDE (Qt Creator)
 
 Qt Creator can open the project directly from `CMakeLists.txt`:
 1. Open Qt Creator → File → Open File or Project
@@ -86,7 +86,7 @@ Qt Creator provides:
 
 ---
 
-## 15.4 Creating a Linux AppImage
+## 23.4 Creating a Linux AppImage
 
 An AppImage bundles all Qt dependencies into a single portable file that runs on any Linux distro.
 
@@ -126,7 +126,7 @@ chmod +x MusicPlayer-x86_64.AppImage
 
 ---
 
-## 15.5 Building on Windows with MSYS2
+## 23.5 Building on Windows with MSYS2
 
 ### Setup
 1. Install [MSYS2](https://www.msys2.org/)
@@ -158,7 +158,7 @@ Copy the resulting folder (containing MusicPlayer.exe and DLLs) to a ZIP file fo
 
 ---
 
-## 15.6 The `.qrc` Resource System — How Files Get Into the Binary
+## 23.6 The `.qrc` Resource System — How Files Get Into the Binary
 
 Two resource files pack content into the binary:
 
@@ -196,7 +196,7 @@ The `qt5_add_resources(RESOURCES qml.qrc icons.qrc)` CMake call runs `rcc` to em
 
 ---
 
-## 15.7 Runtime Data Storage
+## 23.7 Runtime Data Storage
 
 The app stores data in the platform's standard application data directory:
 
@@ -213,7 +213,7 @@ EQ presets (QSettings):
 
 ---
 
-## 15.8 User-Space Installation (No sudo Required)
+## 23.8 User-Space Installation (No sudo Required)
 
 The app can be installed for the current user only — no root privileges needed:
 
@@ -246,7 +246,7 @@ MimeType=audio/mpeg;audio/flac;audio/mp4;audio/ogg;audio/x-wav;...
 
 ---
 
-## 15.8 Quick Reference: Key Files
+## 23.8 Quick Reference: Key Files
 
 | File | Role |
 |------|------|
@@ -274,7 +274,7 @@ MimeType=audio/mpeg;audio/flac;audio/mp4;audio/ogg;audio/x-wav;...
 
 ---
 
-## 15.9 Summary: The Mental Model
+## 23.9 Summary: The Mental Model
 
 When everything is running:
 

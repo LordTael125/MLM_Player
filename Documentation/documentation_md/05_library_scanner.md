@@ -113,11 +113,23 @@ void LibraryScanner::initializeDatabase() {
             "id INTEGER PRIMARY KEY AUTOINCREMENT, "
             "title TEXT, artist TEXT, album TEXT, genre TEXT, "
             "duration INTEGER, filePath TEXT UNIQUE, "   // UNIQUE prevents duplicate paths
-            "hasCoverArt INTEGER, trackNumber INTEGER, discNumber INTEGER)"
+            "hasCoverArt INTEGER, trackNumber INTEGER, discNumber INTEGER, "
+            "totalPlayTime INTEGER DEFAULT 0)"
         );
         // Migration patches — safe to run even if column already exists
         query.exec("ALTER TABLE tracks ADD COLUMN trackNumber INTEGER DEFAULT 0");
         query.exec("ALTER TABLE tracks ADD COLUMN discNumber INTEGER DEFAULT 0");
+        query.exec("ALTER TABLE tracks ADD COLUMN totalPlayTime INTEGER DEFAULT 0");
+
+        // Playlist tables (see Chapter 9)
+        query.exec("CREATE TABLE IF NOT EXISTS playlists ("
+                   "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                   "name TEXT UNIQUE)");
+        query.exec("CREATE TABLE IF NOT EXISTS playlist_tracks ("
+                   "playlist_id INTEGER, "
+                   "track_path TEXT, "
+                   "position INTEGER, "
+                   "FOREIGN KEY(playlist_id) REFERENCES playlists(id))");
     }
 }
 ```
@@ -132,13 +144,14 @@ void LibraryScanner::initializeDatabase() {
 void LibraryScanner::loadDatabase() {
     QVector<Track> loadedTracks;
     QSqlQuery query("SELECT title, artist, album, genre, duration, filePath, "
-                    "hasCoverArt, trackNumber, discNumber FROM tracks");
+                    "hasCoverArt, trackNumber, discNumber, totalPlayTime FROM tracks");
 
     while (query.next()) {          // Iterate over rows
         Track t;
-        t.title      = query.value(0).toString();
-        t.artist     = query.value(1).toString();
+        t.title         = query.value(0).toString();
+        t.artist        = query.value(1).toString();
         // ... etc
+        t.totalPlayTime = query.value(9).toInt();
         loadedTracks.append(t);
     }
 
@@ -160,8 +173,10 @@ db.transaction();     // Begin a batch — much faster than individual INSERTs
 QSqlQuery insertQuery(db);
 insertQuery.prepare(
     "INSERT OR REPLACE INTO tracks "
-    "(title, artist, album, genre, duration, filePath, hasCoverArt, trackNumber, discNumber) "
-    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    "(title, artist, album, genre, duration, filePath, hasCoverArt, "
+    "trackNumber, discNumber, totalPlayTime) "
+    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "
+    "COALESCE((SELECT totalPlayTime FROM tracks WHERE filePath = ?), 0))"
 );
 
 for (const Track &t : newTracks) {
@@ -169,12 +184,15 @@ for (const Track &t : newTracks) {
     insertQuery.bindValue(1, t.artist);
     // ...
     insertQuery.bindValue(5, t.filePath);
+    insertQuery.bindValue(9, t.filePath);  // For the COALESCE subquery
     insertQuery.exec();
 }
 db.commit();   // Commit all at once — 10x - 100x faster than commit per row
 ```
 
 `INSERT OR REPLACE` means: if a row with this `filePath` already exists (UNIQUE constraint), replace it. This makes re-scanning idempotent.
+
+The `COALESCE` subquery preserves the existing `totalPlayTime` value when a track is re-inserted during rescan. Without it, re-scanning a directory would reset all play counts to zero.
 
 ---
 
@@ -279,3 +297,80 @@ User clicks "Scan Directory" in UI
   emit scanFinished(total)
          ↓ (QML closes spinner popup)
 ```
+
+---
+
+## 5.7 Deleted File Cleanup on Rescan
+
+When a user deletes music files from their filesystem and then rescans the directory, those deleted tracks would previously remain in the database forever — appearing as ghost entries in the library that could no longer be played.
+
+The scanner now automatically detects and removes these orphaned entries:
+
+```cpp
+// After inserting all found tracks into the DB, within the same transaction:
+QSqlQuery cleanupQuery(db);
+QString searchPath = path;
+if (!searchPath.endsWith('/')) searchPath += '/';
+
+cleanupQuery.prepare("SELECT filePath FROM tracks WHERE filePath LIKE ?");
+cleanupQuery.bindValue(0, searchPath + "%");
+cleanupQuery.exec();
+
+QStringList toDelete;
+while (cleanupQuery.next()) {
+    QString fp = cleanupQuery.value(0).toString();
+    if (!QFile::exists(fp)) {
+        toDelete.append(fp);
+    }
+}
+
+if (!toDelete.isEmpty()) {
+    QSqlQuery deleteQuery(db);
+    deleteQuery.prepare("DELETE FROM tracks WHERE filePath = ?");
+    for (const QString &fp : toDelete) {
+        deleteQuery.bindValue(0, fp);
+        deleteQuery.exec();
+    }
+}
+```
+
+The cleanup is scoped to the directory being scanned (`WHERE filePath LIKE '/scanned/path/%'`). This means:
+- Only tracks under the rescanned directory are checked
+- Tracks from other directories remain untouched
+- The `QFile::exists()` check runs on the background thread, so the UI stays responsive
+
+---
+
+## 5.8 Play-Time Tracking: `updatePlayTime`
+
+The `updatePlayTime` slot is called by `AudioEngine::playTimeAccumulated` (wired in `main.cpp`) to persist listening time:
+
+```cpp
+void LibraryScanner::updatePlayTime(const QString &filePath, int secondsAdded) {
+    if (secondsAdded <= 0 || filePath.isEmpty()) return;
+
+    // Update in memory
+    for (int i = 0; i < m_tracks.size(); ++i) {
+        if (m_tracks[i].filePath == filePath) {
+            m_tracks[i].totalPlayTime += secondsAdded;
+            break;
+        }
+    }
+
+    // Update in DB
+    QSqlDatabase db = QSqlDatabase::database();
+    if (db.isOpen()) {
+        QSqlQuery query(db);
+        query.prepare("UPDATE tracks SET totalPlayTime = totalPlayTime + ? WHERE filePath = ?");
+        query.bindValue(0, secondsAdded);
+        query.bindValue(1, filePath);
+        query.exec();
+    }
+}
+```
+
+This dual update (memory + database) ensures:
+- The in-memory model stays current for the "Most Played" filter
+- The database is durable across restarts
+- The `totalPlayTime` column is atomically incremented using SQL (`totalPlayTime + ?`), avoiding race conditions
+

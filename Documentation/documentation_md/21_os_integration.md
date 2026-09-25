@@ -1,10 +1,10 @@
-# Chapter 18 — OS Integration: Desktop File and MIME Registration
+# Chapter 21 — OS Integration: Desktop File and MIME Registration
 
 This chapter explains how MLP Player integrates with the Linux desktop environment — registering itself as an audio player, appearing in the application launcher, and receiving files from the file manager.
 
 ---
 
-## 18.1 What Is a `.desktop` File?
+## 21.1 What Is a `.desktop` File?
 
 A `.desktop` file is a standardised text file defined by the [freedesktop.org Desktop Entry Specification](https://specifications.freedesktop.org/desktop-entry-spec/latest/). It tells the desktop environment:
 
@@ -16,7 +16,7 @@ Without a `.desktop` file, the OS application launcher and file managers don't k
 
 ---
 
-## 18.2 MusicPlayer.desktop — Full Contents
+## 21.2 MusicPlayer.desktop — Full Contents
 
 ```desktop
 [Desktop Entry]
@@ -33,7 +33,7 @@ MimeType=audio/aac;audio/x-flac;audio/flac;audio/mp4;audio/mpeg;audio/mpegurl;au
 
 ---
 
-## 18.3 The `Exec` Field — Portable Path Resolution
+## 21.3 The `Exec` Field — Portable Path Resolution
 
 Hardcoding an absolute path like `Exec=/home/lordtael125/.var/...` would make the desktop file non-portable — it would break on any other machine.
 
@@ -61,11 +61,11 @@ Breaking this down:
 | `%F` | All selected files are passed to a **single** process launch |
 | `%f` | The app is launched **once per file** (creates multiple processes) |
 
-We use `%F` so that selecting 10 files results in one process with 10 arguments — which our IPC system then handles correctly (see Chapter 16).
+We use `%F` so that selecting 10 files results in one process with 10 arguments — which our IPC system then handles correctly (see Chapter 20).
 
 ---
 
-## 18.4 MIME Type List
+## 21.4 MIME Type List
 
 The `MimeType=` line is what tells file managers and the OS "this app can open these file types." Our registration covers all common audio formats:
 
@@ -91,7 +91,7 @@ When you right-click an audio file and choose "Open With", MLP Player will appea
 
 ---
 
-## 18.5 User-Space Installation (No Root Required)
+## 21.5 User-Space Installation (No Root Required)
 
 Standard application installs require root (`sudo make install`) and place files in `/usr/`, which needs admin rights. MLP Player instead installs into the user's own home directory.
 
@@ -123,7 +123,7 @@ install(FILES "Dist/Linux/AppIcon.png"
 
 ---
 
-## 18.6 Registering MIME Associations
+## 21.6 Registering MIME Associations
 
 After running `make install`, the desktop file is on disk but the MIME database doesn't know about it yet. You must update it:
 
@@ -142,7 +142,7 @@ After this command:
 
 ---
 
-## 18.7 Icon Resolution
+## 21.7 Icon Resolution
 
 The icon name in the `.desktop` file is:
 ```desktop
@@ -158,7 +158,7 @@ The `hicolor` theme (the fallback theme on all freedesktop-compliant desktops) w
 
 ---
 
-## 18.8 Testing the Integration
+## 21.8 Testing the Integration
 
 After `make install` and `update-desktop-database`:
 

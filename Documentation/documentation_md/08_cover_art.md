@@ -36,20 +36,22 @@ public:
     CoverArtProvider();
     QImage requestImage(const QString &id, QSize *size,
                         const QSize &requestedSize) override;
+
+    static QImage extractImageFromTag(const QString &filePath);
 };
 ```
 
 Note: `CoverArtProvider` does **not** inherit from `QObject`. It inherits from `QQuickImageProvider` instead. It therefore has **no signals or slots** and does not use `Q_OBJECT`.
 
+The `static extractImageFromTag()` method was added so that other C++ classes (specifically `MprisManager`, see Chapter 10) can extract album art from audio files without needing access to the QML image provider system.
+
 ---
 
 ## 8.4 Full Implementation
 
-```cpp
-CoverArtProvider::CoverArtProvider()
-    : QQuickImageProvider(QQuickImageProvider::Image)  // We return QImage objects
-{}
+The `requestImage` method now delegates the actual TagLib extraction to the static helper:
 
+```cpp
 QImage CoverArtProvider::requestImage(const QString &id, QSize *size,
                                        const QSize &requestedSize)
 {
@@ -66,6 +68,29 @@ QImage CoverArtProvider::requestImage(const QString &id, QSize *size,
         return image;
     };
 
+    // Delegate to the static extraction method
+    image = extractImageFromTag(filePath);
+
+    // Fallback: if no art found (or null image), return a dark placeholder
+    if (image.isNull()) {
+        image = QImage(200, 200, QImage::Format_RGB32);
+        image.fill(QColor("#33333b"));  // dark neutral gray
+    }
+
+    return returnImage();
+}
+```
+
+---
+
+## 8.5 The Static Extraction Method
+
+`extractImageFromTag` contains the format-specific TagLib logic to pull cover art from audio files. It returns a `QImage` — either the decoded art, or a null `QImage` if none was found:
+
+```cpp
+QImage CoverArtProvider::extractImageFromTag(const QString &filePath) {
+    QImage image;
+
     // --- MP3: Read APIC (Attached Picture) frame from ID3v2 tag ---
     if (filePath.endsWith(".mp3", Qt::CaseInsensitive)) {
         TagLib::MPEG::File mpegFile(filePath.toUtf8().constData());
@@ -76,7 +101,6 @@ QImage CoverArtProvider::requestImage(const QString &id, QSize *size,
                 if (!frameList.isEmpty()) {
                     auto frame = static_cast<TagLib::ID3v2::AttachedPictureFrame *>(
                         frameList.front());
-                    // frame->picture() returns raw JPEG/PNG bytes
                     image.loadFromData(
                         (const uchar *)frame->picture().data(),
                         frame->picture().size()
@@ -114,19 +138,21 @@ QImage CoverArtProvider::requestImage(const QString &id, QSize *size,
         }
     }
 
-    // Fallback: if no art found (or null image), return a dark placeholder
-    if (image.isNull()) {
-        image = QImage(200, 200, QImage::Format_RGB32);
-        image.fill(QColor("#33333b"));  // dark neutral gray
-    }
-
-    return returnImage();
+    return image;  // Returns null QImage if no art was found
 }
 ```
 
+This method is `static` so it can be called without an instance of `CoverArtProvider`:
+```cpp
+// From MprisManager (Chapter 10):
+QImage cover = CoverArtProvider::extractImageFromTag(filePath);
+```
+
+The key design decision: `extractImageFromTag` does **not** apply a fallback placeholder. Only the QML-facing `requestImage` method does that. This way, callers like `MprisManager` can distinguish "no art found" (null image) from a real image and handle it accordingly.
+
 ---
 
-## 8.5 Registering the Provider in main.cpp
+## 8.6 Registering the Provider in main.cpp
 
 ```cpp
 QQmlApplicationEngine engine;
@@ -137,7 +163,7 @@ This registers the provider under the name `"musiccover"`, which matches the `im
 
 ---
 
-## 8.6 Optimizing: sourceSize in QML
+## 8.7 Optimizing: sourceSize in QML
 
 In the queue drawer and track list, album art is shown at small sizes (40×40 px). Without a `sourceSize`, Qt would load the full 500×500 JPEG and scale it in the GPU. With it:
 
@@ -153,3 +179,4 @@ Image {
 ```
 
 `sourceSize` is passed as `requestedSize` to `requestImage()`. The `returnImage` lambda scales the decoded image to this size before returning — saving GPU memory and improving render performance.
+

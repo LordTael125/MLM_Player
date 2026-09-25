@@ -1,10 +1,10 @@
-# Chapter 10 — QML Language Fundamentals for C++ Developers
+# Chapter 13 — QML Language Fundamentals for C++ Developers
 
 QML (Qt Modeling Language) is a **declarative language** for building UIs. Instead of writing imperative code that says "create a button, then set its color, then position it", you declare what the UI should look like as a **tree of nested objects**.
 
 ---
 
-## 10.1 Your First QML File
+## 13.1 Your First QML File
 
 ```qml
 import QtQuick 2.15        // Core QML types (Rectangle, Text, MouseArea, etc.)
@@ -34,7 +34,7 @@ Key observations:
 
 ---
 
-## 10.2 Types You'll See in This Project
+## 13.2 Types You'll See in This Project
 
 | QML Type | Purpose |
 |----------|---------|
@@ -57,7 +57,7 @@ Key observations:
 
 ---
 
-## 10.3 Properties: Built-in and Custom
+## 13.3 Properties: Built-in and Custom
 
 Every QML item has built-in properties (`width`, `height`, `color`, `visible`, etc.). You can define your own:
 
@@ -83,7 +83,7 @@ Rectangle {
 
 ---
 
-## 10.4 id — Addressing Items by Name
+## 13.4 id — Addressing Items by Name
 
 Every item can have a unique `id` that lets other items reference it:
 
@@ -107,7 +107,7 @@ ApplicationWindow {
 
 ---
 
-## 10.5 Signals and Handlers in QML
+## 13.5 Signals and Handlers in QML
 
 C++ signals become `on<SignalName>` handlers in QML:
 
@@ -143,7 +143,7 @@ Connections {
 
 ---
 
-## 10.6 Functions in QML
+## 13.6 Functions in QML
 
 JavaScript functions live inside QML items:
 
@@ -165,7 +165,7 @@ Rectangle {
 
 ---
 
-## 10.7 ListView and Delegates
+## 13.7 ListView and Delegates
 
 `ListView` displays a scrollable list from a model. The `delegate` defines what each row looks like:
 
@@ -207,7 +207,7 @@ Inside a delegate:
 
 ---
 
-## 10.8 Anchors — The Layout System
+## 13.8 Anchors — The Layout System
 
 `anchors` is how you position items relative to their parent or siblings:
 
@@ -240,7 +240,7 @@ You can anchor to `parent.top`, `parent.bottom`, `parent.left`, `parent.right`, 
 
 ---
 
-## 10.9 Layouts vs Anchors
+## 13.9 Layouts vs Anchors
 
 For multiple children that need to be arranged together, use `RowLayout` / `ColumnLayout`:
 
@@ -261,7 +261,7 @@ RowLayout {
 
 ---
 
-## 10.10 Animations and Behaviors
+## 13.10 Animations and Behaviors
 
 QML makes animation very easy:
 
@@ -287,7 +287,7 @@ Rectangle {
 
 ---
 
-## 10.11 Importing Other QML Files
+## 13.11 Importing Other QML Files
 
 When `main.qml` uses `LibraryView { ... }`, it imports `LibraryView.qml` from the same directory. No explicit `import` statement is needed — **all `.qml` files in the same directory are automatically available by their filename** (minus `.qml`).
 

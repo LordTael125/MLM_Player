@@ -11,9 +11,14 @@
 - Adjust sound using a 10-band graphic equalizer
 - Maintain a playback queue with skip, repeat (Off/Track/All), seek functionality
 - Launch in three distinct modes depending on how it is invoked (Library, Minimal, Queue)
-- Detect and redirect secondary instances via IPC to prevent duplicate window spawning
+- Detect and redirect secondary instances via IPC to prevent duplicate window spawning (Minimal/Queue modes only — Library mode allows multiple windows)
 - Display a compact 700×350 Minimal Now Playing view when opened from a file manager
 - Register itself with the OS as a handler for all common audio MIME types
+- Create and manage playlists with add, remove, reorder, and sort operations
+- Track per-song play time and provide a "Most Played" filter
+- Integrate with the Linux desktop via MPRIS2 D-Bus (KDE Plasma, GNOME media controls, lock screen widgets) with full metadata and cover art
+- Accept gamepad/controller input for hands-free navigation via SDL2
+- Automatically remove deleted files from the library during rescan
 
 The project is structured so that the **business logic lives in C++** and the **UI is written in QML** (Qt's declarative UI language). These two worlds communicate through Qt's signal-slot mechanism and context properties.
 
@@ -24,13 +29,15 @@ The project is structured so that the **business logic lives in C++** and the **
 | Technology | Role | Why |
 |---|---|---|
 | **C++ 17** | Core language | Performance, type safety, rich ecosystem |
-| **Qt 5** | Framework glue (widgets, threading, SQL, networking) | Comprehensive cross-platform framework |
+| **Qt 5** | Framework glue (widgets, threading, SQL, networking, D-Bus) | Comprehensive cross-platform framework |
 | **QML / Qt Quick 2** | Declarative UI language | Fast, smooth, modern UI without Qt Widgets verbosity |
 | **miniaudio** (header-only) | Audio playback engine | Tiny, zero-dependency, powerful node graph |
 | **TagLib** | Audio tag reading (ID3, Vorbis, MP4) | Mature, reliable library for music metadata |
 | **SQLite via Qt Sql** | Persistent library database | Lightweight embedded database, ships with Qt |
 | **QtConcurrent** | Background threading | Safe Qt-aware thread pool |
 | **Qt Network (QLocalServer/Socket)** | Single-instance IPC | Unix domain socket communication between processes |
+| **Qt D-Bus** | MPRIS2 media integration | Exposes playback controls and metadata to the Linux desktop |
+| **SDL2** | Gamepad/controller input | Cross-platform gamepad polling and button/axis mapping |
 | **Qt Labs Settings** | Session persistence | Cross-platform key-value store for queue/position restore |
 | **CMake 3.16+** | Build system | Industry standard, cross-platform build tool |
 
@@ -57,32 +64,44 @@ This app is a full production-grade application with:
 
 ```
 Music Player/
-├── CMakeLists.txt          ← Build script
-├── include/                ← All .h header files
-│   ├── track.h             ← Plain data struct: a single song's info
-│   ├── track_model.h       ← Qt model bridging Track data to QML
-│   ├── library_scanner.h   ← Scans folders, reads tags, writes to DB
-│   ├── audio_engine.h      ← Plays audio, controls volume/seek
-│   ├── equalizer.h         ← 10-band EQ with presets
-│   └── cover_art_provider.h← Converts file paths to QImages for QML
-├── src/                    ← All .cpp implementation files
-│   ├── main.cpp            ← App entry point, wires everything together
+├── CMakeLists.txt              ← Build script
+├── include/                    ← All .h header files
+│   ├── track.h                 ← Plain data struct: a single song's info
+│   ├── track_model.h           ← Qt model bridging Track data to QML
+│   ├── library_scanner.h       ← Scans folders, reads tags, writes to DB
+│   ├── audio_engine.h          ← Plays audio, controls volume/seek
+│   ├── equalizer.h             ← 10-band EQ with presets
+│   ├── cover_art_provider.h    ← Converts file paths to QImages for QML
+│   ├── playlist_manager.h      ← Playlist CRUD operations via SQLite
+│   ├── mpris_manager.h         ← MPRIS2 D-Bus integration for Linux desktops
+│   └── gamepad_controller.h    ← SDL2-based gamepad input handling
+├── src/                        ← All .cpp implementation files
+│   ├── main.cpp                ← App entry point, wires everything together
 │   ├── track_model.cpp
 │   ├── library_scanner.cpp
 │   ├── audio_engine.cpp
 │   ├── equalizer.cpp
-│   └── cover_art_provider.cpp
-├── qml/                    ← All QML (UI) files
-│   ├── main.qml            ← Root window, playback bar, popups, shortcuts, mode routing
-│   ├── LibraryView.qml     ← The main tabbed library browser (5 view modes)
-│   ├── EqualizerView.qml   ← The EQ slider UI with preset management
-│   ├── NowPlayingView.qml  ← Full-screen now playing overlay
-│   ├── MinimalView.qml     ← Compact 700x350 now playing window for file-explorer launches
-│   └── icons/              ← SVG icons used in the UI
-├── third_party/            ← Bundled header-only libraries
-│   └── miniaudio.h         ← The entire audio engine in one file
-├── qml.qrc                 ← Qt resource file listing QML files
-└── icons.qrc               ← Qt resource file listing icon SVGs
+│   ├── cover_art_provider.cpp
+│   ├── playlist_manager.cpp
+│   ├── mpris_manager.cpp
+│   └── gamepad_controller.cpp
+├── qml/                        ← All QML (UI) files
+│   ├── main.qml                ← Root window, playback bar, shortcuts, mode routing
+│   ├── AppPopups.qml           ← Centralized popup management (all popups live here)
+│   ├── LibraryView.qml         ← The main tabbed library browser (7 view modes)
+│   ├── EqualizerView.qml       ← The EQ slider UI with preset management
+│   ├── NowPlayingView.qml      ← Full-screen now playing overlay
+│   ├── MinimalView.qml         ← Compact 700x350 now playing window for file-explorer launches
+│   ├── PlaylistsView.qml       ← Grid of playlist tiles
+│   ├── PlaylistDetailsView.qml ← Track list for a single playlist (with edit mode)
+│   ├── PlaylistPopup.qml       ← Add-to-playlist, create, right-click menu popups
+│   ├── GamepadControl.qml      ← Zone-based gamepad navigation logic
+│   ├── components/             ← Reusable QML components
+│   └── icons/                  ← SVG icons used in the UI
+├── third_party/                ← Bundled header-only libraries
+│   └── miniaudio.h             ← The entire audio engine in one file
+├── qml.qrc                     ← Qt resource file listing QML files
+└── icons.qrc                   ← Qt resource file listing icon SVGs
 ```
 
 ---
@@ -98,6 +117,8 @@ The most important concept in this project is understanding how C++ talks to QML
 │   AudioEngine   LibraryScanner          │
 │   TrackModel    Equalizer               │
 │   CoverArtProvider                      │
+│   PlaylistManager  MprisManager         │
+│   GamepadController                     │
 │                                         │
 │   These live in memory as QObject       │
 │   subclasses.                           │
@@ -108,8 +129,9 @@ The most important concept in this project is understanding how C++ talks to QML
 ┌───────────────▼─────────────────────────┐
 │                QML World                │
 │                                         │
-│   main.qml    LibraryView.qml           │
-│   EqualizerView.qml                     │
+│   main.qml         AppPopups.qml        │
+│   LibraryView.qml  PlaylistsView.qml    │
+│   EqualizerView.qml  GamepadControl.qml │
 │                                         │
 │   These access C++ objects like         │
 │   JavaScript objects using the names    │
@@ -122,7 +144,7 @@ When QML calls:
 audioEngine.play()
 ```
 
-It is actually calling the `AudioEngine::play()` C++ slot through Qt's meta-object system. This magic is covered in detail in Chapter 9.
+It is actually calling the `AudioEngine::play()` C++ slot through Qt's meta-object system. This magic is covered in detail in Chapter 12.
 
 ---
 

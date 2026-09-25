@@ -6,25 +6,61 @@ This handbook is written for someone who knows basic C++ and wants to fully unde
 
 ## Table of Contents
 
+### Part I — Foundations
+
 | Chapter | File | Topic |
 |---------|------|-------|
-| 1 | [01_introduction.md](01_introduction.md) | Project Overview, Goals, Technology Stack |
-| 2 | [02_build_system.md](02_build_system.md) | CMake, Qt5, Linking Libraries, Building the App |
-| 3 | [03_cpp_foundations.md](03_cpp_foundations.md) | Qt Basics: QObject, Signals & Slots, Q_PROPERTY |
-| 4 | [04_data_layer.md](04_data_layer.md) | Track struct, TrackModel, QAbstractListModel |
-| 5 | [05_library_scanner.md](05_library_scanner.md) | LibraryScanner, TagLib, SQLite, QtConcurrent |
-| 6 | [06_audio_engine.md](06_audio_engine.md) | AudioEngine, miniaudio, Node Graph, EQ Chain |
-| 7 | [07_equalizer.md](07_equalizer.md) | Equalizer class, Presets, QSettings |
-| 8 | [08_cover_art.md](08_cover_art.md) | CoverArtProvider, QQuickImageProvider |
-| 9 | [09_main_bridge.md](09_main_bridge.md) | main.cpp, Wiring Backend to QML, Context Properties |
-| 10 | [10_qml_fundamentals.md](10_qml_fundamentals.md) | QML Language Crash Course for C++ Devs |
-| 11 | [11_qml_main_window.md](11_qml_main_window.md) | main.qml deep-dive: Window, Layouts, Playback Bar |
-| 12 | [12_qml_library_view.md](12_qml_library_view.md) | LibraryView.qml: Tabs, Tiles, Filtering |
-| 13 | [13_qml_equalizer_view.md](13_qml_equalizer_view.md) | EqualizerView.qml, NowPlayingView.qml |
-| 14 | [14_dataflow.md](14_dataflow.md) | Full End-to-End Dataflow Diagrams |
-| 15 | [15_building_and_packaging.md](15_building_and_packaging.md) | Build Steps, AppImage, Deploy on Windows |
+| 1 | [01_introduction.md](#01_introduction.md) | Project Overview, Goals, Technology Stack |
+| 2 | [02_build_system.md](#02_build_system.md) | CMake, Qt5, SDL2, DBus, Linking Libraries |
+| 3 | [03_cpp_foundations.md](#03_cpp_foundations.md) | Qt Basics: QObject, Signals & Slots, Q_PROPERTY |
 
-> **Tip:** Read the chapters in order on your first pass. Each chapter builds on the previous.
+### Part II — C++ Backend
+
+| Chapter | File | Topic |
+|---------|------|-------|
+| 4 | [04_data_layer.md](#04_data_layer.md) | Track struct, TrackModel, QAbstractListModel |
+| 5 | [05_library_scanner.md](#05_library_scanner.md) | LibraryScanner, TagLib, SQLite, Play-Time Tracking |
+| 6 | [06_audio_engine.md](#06_audio_engine.md) | AudioEngine, miniaudio, Node Graph, EQ Chain |
+| 7 | [07_equalizer.md](#07_equalizer.md) | Equalizer class, Presets, QSettings |
+| 8 | [08_cover_art.md](#08_cover_art.md) | CoverArtProvider, extractImageFromTag |
+| 9 | [09_playlist_system.md](#09_playlist_system.md) | PlaylistManager, SQLite Schema, CRUD Operations |
+| 10 | [10_mpris_integration.md](#10_mpris_integration.md) | MPRIS2 D-Bus, Cover Art to Desktop |
+| 11 | [11_gamepad_control.md](#11_gamepad_control.md) | GamepadController, SDL2 Polling, Zone Navigation |
+
+### Part III — The Bridge
+
+| Chapter | File | Topic |
+|---------|------|-------|
+| 12 | [12_main_bridge.md](#12_main_bridge.md) | main.cpp: Wiring All Backends to QML |
+
+### Part IV — QML Frontend
+
+| Chapter | File | Topic |
+|---------|------|-------|
+| 13 | [13_qml_fundamentals.md](#13_qml_fundamentals.md) | QML Language Crash Course for C++ Devs |
+| 14 | [14_qml_main_window.md](#14_qml_main_window.md) | main.qml: Root Window, Playback Bar |
+| 15 | [15_qml_library_view.md](#15_qml_library_view.md) | LibraryView.qml: Tabs, Tiles, Filtering |
+| 16 | [16_qml_equalizer_view.md](#16_qml_equalizer_view.md) | EqualizerView.qml and NowPlayingView.qml |
+| 17 | [17_qml_minimal_view.md](#17_qml_minimal_view.md) | MinimalView: Compact Now Playing Window |
+| 18 | [18_qml_playlist_views.md](#18_qml_playlist_views.md) | PlaylistsView, PlaylistDetailsView, PlaylistPopup |
+| 19 | [19_qml_popup_architecture.md](#19_qml_popup_architecture.md) | AppPopups.qml: Centralized Popup Management |
+
+### Part V — System Integration & Deployment
+
+| Chapter | File | Topic |
+|---------|------|-------|
+| 20 | [20_launch_modes_and_ipc.md](#20_launch_modes_and_ipc.md) | Launch Modes, Single-Instance IPC, Multi-Instance Library |
+| 21 | [21_os_integration.md](#21_os_integration.md) | Desktop File, MIME Registration, Icon |
+| 22 | [22_dataflow.md](#22_dataflow.md) | Full End-to-End Dataflow Diagrams (capstone) |
+| 23 | [23_building_and_packaging.md](#23_building_and_packaging.md) | Build Steps, Install, AppImage |
+
+> **Tip:** Read the chapters in order on your first pass. Each chapter builds on the previous. Part I–II covers all C++ backend code, Part III shows how it all wires together, Part IV covers the QML UI, and Part V covers system-level integration and deployment.
+
+
+<div class="page-break"></div>
+
+<a id="01_introduction.md"></a>
+
 # Chapter 1 — Introduction & Technology Stack
 
 ## 1.1 What is this project?
@@ -32,11 +68,20 @@ This handbook is written for someone who knows basic C++ and wants to fully unde
 **Modern Music Player** is a cross-platform, local-library music player built entirely in **C++ with a Qt 5 / QML frontend**. It can:
 
 - Scan a folder (and all sub-folders) for audio files
-- Read metadata (artist, album, title, track number, genre) from audio tags
+- Read metadata (artist, album, title, track number, disc number, genre) from audio tags
 - Display artwork embedded in audio files
 - Play music using a high-performance audio engine
 - Adjust sound using a 10-band graphic equalizer
-- Maintain a playback queue with skip, repeat, seek functionality
+- Maintain a playback queue with skip, repeat (Off/Track/All), seek functionality
+- Launch in three distinct modes depending on how it is invoked (Library, Minimal, Queue)
+- Detect and redirect secondary instances via IPC to prevent duplicate window spawning (Minimal/Queue modes only — Library mode allows multiple windows)
+- Display a compact 700×350 Minimal Now Playing view when opened from a file manager
+- Register itself with the OS as a handler for all common audio MIME types
+- Create and manage playlists with add, remove, reorder, and sort operations
+- Track per-song play time and provide a "Most Played" filter
+- Integrate with the Linux desktop via MPRIS2 D-Bus (KDE Plasma, GNOME media controls, lock screen widgets) with full metadata and cover art
+- Accept gamepad/controller input for hands-free navigation via SDL2
+- Automatically remove deleted files from the library during rescan
 
 The project is structured so that the **business logic lives in C++** and the **UI is written in QML** (Qt's declarative UI language). These two worlds communicate through Qt's signal-slot mechanism and context properties.
 
@@ -47,12 +92,16 @@ The project is structured so that the **business logic lives in C++** and the **
 | Technology | Role | Why |
 |---|---|---|
 | **C++ 17** | Core language | Performance, type safety, rich ecosystem |
-| **Qt 5** | Framework glue (widgets, threading, SQL, networking) | Comprehensive cross-platform framework |
+| **Qt 5** | Framework glue (widgets, threading, SQL, networking, D-Bus) | Comprehensive cross-platform framework |
 | **QML / Qt Quick 2** | Declarative UI language | Fast, smooth, modern UI without Qt Widgets verbosity |
 | **miniaudio** (header-only) | Audio playback engine | Tiny, zero-dependency, powerful node graph |
 | **TagLib** | Audio tag reading (ID3, Vorbis, MP4) | Mature, reliable library for music metadata |
 | **SQLite via Qt Sql** | Persistent library database | Lightweight embedded database, ships with Qt |
 | **QtConcurrent** | Background threading | Safe Qt-aware thread pool |
+| **Qt Network (QLocalServer/Socket)** | Single-instance IPC | Unix domain socket communication between processes |
+| **Qt D-Bus** | MPRIS2 media integration | Exposes playback controls and metadata to the Linux desktop |
+| **SDL2** | Gamepad/controller input | Cross-platform gamepad polling and button/axis mapping |
+| **Qt Labs Settings** | Session persistence | Cross-platform key-value store for queue/position restore |
 | **CMake 3.16+** | Build system | Industry standard, cross-platform build tool |
 
 ---
@@ -78,31 +127,44 @@ This app is a full production-grade application with:
 
 ```
 Music Player/
-├── CMakeLists.txt          ← Build script
-├── include/                ← All .h header files
-│   ├── track.h             ← Plain data struct: a single song's info
-│   ├── track_model.h       ← Qt model bridging Track data to QML
-│   ├── library_scanner.h   ← Scans folders, reads tags, writes to DB
-│   ├── audio_engine.h      ← Plays audio, controls volume/seek
-│   ├── equalizer.h         ← 10-band EQ with presets
-│   └── cover_art_provider.h← Converts file paths to QImages for QML
-├── src/                    ← All .cpp implementation files
-│   ├── main.cpp            ← App entry point, wires everything together
+├── CMakeLists.txt              ← Build script
+├── include/                    ← All .h header files
+│   ├── track.h                 ← Plain data struct: a single song's info
+│   ├── track_model.h           ← Qt model bridging Track data to QML
+│   ├── library_scanner.h       ← Scans folders, reads tags, writes to DB
+│   ├── audio_engine.h          ← Plays audio, controls volume/seek
+│   ├── equalizer.h             ← 10-band EQ with presets
+│   ├── cover_art_provider.h    ← Converts file paths to QImages for QML
+│   ├── playlist_manager.h      ← Playlist CRUD operations via SQLite
+│   ├── mpris_manager.h         ← MPRIS2 D-Bus integration for Linux desktops
+│   └── gamepad_controller.h    ← SDL2-based gamepad input handling
+├── src/                        ← All .cpp implementation files
+│   ├── main.cpp                ← App entry point, wires everything together
 │   ├── track_model.cpp
 │   ├── library_scanner.cpp
 │   ├── audio_engine.cpp
 │   ├── equalizer.cpp
-│   └── cover_art_provider.cpp
-├── qml/                    ← All QML (UI) files
-│   ├── main.qml            ← Root window, playback bar, popups, shortcuts
-│   ├── LibraryView.qml     ← The main tabbed library browser
-│   ├── EqualizerView.qml   ← The EQ knobs UI
-│   ├── NowPlayingView.qml  ← Full-screen now playing overlay
-│   └── icons/              ← SVG icons used in the UI
-├── third_party/            ← Bundled header-only libraries
-│   └── miniaudio.h         ← The entire audio engine in one file
-├── qml.qrc                 ← Qt resource file listing QML files
-└── icons.qrc               ← Qt resource file listing icon SVGs
+│   ├── cover_art_provider.cpp
+│   ├── playlist_manager.cpp
+│   ├── mpris_manager.cpp
+│   └── gamepad_controller.cpp
+├── qml/                        ← All QML (UI) files
+│   ├── main.qml                ← Root window, playback bar, shortcuts, mode routing
+│   ├── AppPopups.qml           ← Centralized popup management (all popups live here)
+│   ├── LibraryView.qml         ← The main tabbed library browser (7 view modes)
+│   ├── EqualizerView.qml       ← The EQ slider UI with preset management
+│   ├── NowPlayingView.qml      ← Full-screen now playing overlay
+│   ├── MinimalView.qml         ← Compact 700x350 now playing window for file-explorer launches
+│   ├── PlaylistsView.qml       ← Grid of playlist tiles
+│   ├── PlaylistDetailsView.qml ← Track list for a single playlist (with edit mode)
+│   ├── PlaylistPopup.qml       ← Add-to-playlist, create, right-click menu popups
+│   ├── GamepadControl.qml      ← Zone-based gamepad navigation logic
+│   ├── components/             ← Reusable QML components
+│   └── icons/                  ← SVG icons used in the UI
+├── third_party/                ← Bundled header-only libraries
+│   └── miniaudio.h             ← The entire audio engine in one file
+├── qml.qrc                     ← Qt resource file listing QML files
+└── icons.qrc                   ← Qt resource file listing icon SVGs
 ```
 
 ---
@@ -118,6 +180,8 @@ The most important concept in this project is understanding how C++ talks to QML
 │   AudioEngine   LibraryScanner          │
 │   TrackModel    Equalizer               │
 │   CoverArtProvider                      │
+│   PlaylistManager  MprisManager         │
+│   GamepadController                     │
 │                                         │
 │   These live in memory as QObject       │
 │   subclasses.                           │
@@ -128,8 +192,9 @@ The most important concept in this project is understanding how C++ talks to QML
 ┌───────────────▼─────────────────────────┐
 │                QML World                │
 │                                         │
-│   main.qml    LibraryView.qml           │
-│   EqualizerView.qml                     │
+│   main.qml         AppPopups.qml        │
+│   LibraryView.qml  PlaylistsView.qml    │
+│   EqualizerView.qml  GamepadControl.qml │
 │                                         │
 │   These access C++ objects like         │
 │   JavaScript objects using the names    │
@@ -142,7 +207,7 @@ When QML calls:
 audioEngine.play()
 ```
 
-It is actually calling the `AudioEngine::play()` C++ slot through Qt's meta-object system. This magic is covered in detail in Chapter 9.
+It is actually calling the `AudioEngine::play()` C++ slot through Qt's meta-object system. This magic is covered in detail in Chapter 12.
 
 ---
 
@@ -158,6 +223,12 @@ You do NOT need to know:
 - Audio programming (we explain every concept)
 
 Let's begin!
+
+
+<div class="page-break"></div>
+
+<a id="02_build_system.md"></a>
+
 # Chapter 2 — The Build System (CMake)
 
 ## 2.1 What is a Build System?
@@ -180,9 +251,9 @@ cmake_minimum_required(VERSION 3.16)
 > Declares the minimum CMake version required. 3.16 introduced `qt5_add_resources` improvements.
 
 ```cmake
-project(MusicPlayer VERSION 1.0 LANGUAGES CXX)
+project(MusicPlayer VERSION 1.3.2 LANGUAGES CXX)
 ```
-> Declares the project name `MusicPlayer`, version `1.0`, and that only C++ code is used.
+> Declares the project name `MusicPlayer`, version `1.3.2`, and that only C++ code is used.
 
 ```cmake
 set(CMAKE_CXX_STANDARD 17)
@@ -206,7 +277,7 @@ set(CMAKE_AUTOUIC ON)
 > - `AUTOUIC`: Auto-processes `.ui` files (we don't use these, but it's good practice to enable).
 
 ```cmake
-find_package(Qt5 COMPONENTS Core Gui Widgets Qml Quick Sql Concurrent REQUIRED)
+find_package(Qt5 COMPONENTS Core Gui Widgets Qml Quick Sql Concurrent Network DBus REQUIRED)
 ```
 > Finds the Qt5 installation on your system and enables the specified **modules**:
 >
@@ -219,31 +290,41 @@ find_package(Qt5 COMPONENTS Core Gui Widgets Qml Quick Sql Concurrent REQUIRED)
 > | `Quick` | QQuickImageProvider (for cover art) |
 > | `Sql` | QSqlDatabase, QSqlQuery (SQLite) |
 > | `Concurrent` | QtConcurrent::run() — background threads |
+> | `Network` | QLocalServer, QLocalSocket — single-instance IPC |
+> | `DBus` | QDBusConnection, QDBusAbstractAdaptor — MPRIS2 integration |
 
 ```cmake
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(TAGLIB REQUIRED taglib)
+pkg_check_modules(SDL2 REQUIRED sdl2)
 ```
-> Finds **TagLib** using the system's `pkg-config` tool. This sets `TAGLIB_INCLUDE_DIRS` and `TAGLIB_LIBRARIES` variables for us.
+> Finds **TagLib** and **SDL2** using the system's `pkg-config` tool. This sets `TAGLIB_INCLUDE_DIRS`, `TAGLIB_LIBRARIES`, `SDL2_INCLUDE_DIRS`, and `SDL2_LIBRARIES` variables.
 
 ```cmake
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party
     ${TAGLIB_INCLUDE_DIRS}
+    ${SDL2_INCLUDE_DIRS}
 )
 ```
 > Tells the compiler where to find `.h` headers:
 > - `include/` — our own headers
 > - `third_party/` — where `miniaudio.h` lives
-> - TagLib's system headers
+> - TagLib's and SDL2's system headers
 
 ```cmake
 set(SOURCES
     src/main.cpp
-    src/audio_engine.cpp
-    include/audio_engine.h
-    ...
+    src/audio_engine.cpp     include/audio_engine.h
+    src/equalizer.cpp        include/equalizer.h
+    src/library_scanner.cpp  include/library_scanner.h
+    include/track.h
+    src/track_model.cpp      include/track_model.h
+    src/cover_art_provider.cpp include/cover_art_provider.h
+    src/gamepad_controller.cpp include/gamepad_controller.h
+    src/playlist_manager.cpp include/playlist_manager.h
+    src/mpris_manager.cpp    include/mpris_manager.h
 )
 ```
 > Lists every source file. **Note**: headers are listed here too. This is not strictly required for compilation, but it helps IDE tools (like Qt Creator) discover and show them.
@@ -260,14 +341,17 @@ add_executable(MusicPlayer ${SOURCES} ${RESOURCES})
 
 ```cmake
 target_link_libraries(MusicPlayer PRIVATE
-    Qt5::Core Qt5::Gui Qt5::Widgets Qt5::Qml Qt5::Quick Qt5::Sql Qt5::Concurrent
+    Qt5::Core Qt5::Gui Qt5::Widgets Qt5::Qml Qt5::Quick Qt5::Sql
+    Qt5::Concurrent Qt5::Network Qt5::DBus
     ${TAGLIB_LIBRARIES}
+    ${SDL2_LIBRARIES}
     dl pthread m
 )
 ```
 > Links the executable against:
-> - All Qt5 modules
-> - TagLib
+> - All Qt5 modules including `Qt5::Network` (IPC) and `Qt5::DBus` (MPRIS2)
+> - TagLib (audio tag reading)
+> - SDL2 (gamepad input)
 > - `dl` (dynamic linker, needed by miniaudio for `dlopen`)
 > - `pthread` (POSIX threads, needed by miniaudio)
 > - `m` (math library, `libm`, for `sin`, `cos`, `fmaxf` in the equalizer)
@@ -286,6 +370,7 @@ Normal file paths like `"/home/user/qml/main.qml"` only work on that one machine
     <file>qml/LibraryView.qml</file>
     <file>qml/EqualizerView.qml</file>
     <file>qml/NowPlayingView.qml</file>
+    <file>qml/MinimalView.qml</file>
   </qresource>
 </RCC>
 ```
@@ -376,6 +461,31 @@ Object files (.o)
     ↓ linker (ld)
 MusicPlayer (final executable, ~20-40 MB)
 ```
+
+---
+
+## 2.7 User-Space Installation Rules
+
+Unlike system-wide installs (which need `sudo`), this app installs entirely into the current user's home directory:
+
+```cmake
+# Installation Targets for Local User Integration
+install(TARGETS MusicPlayer RUNTIME DESTINATION "$ENV{HOME}/.var/app/com.musicplayer.mlmPlayer")
+install(FILES "Dist/Linux/MusicPlayer.desktop" DESTINATION "$ENV{HOME}/.local/share/applications")
+install(FILES "Dist/Linux/AppIcon.png" DESTINATION "$ENV{HOME}/.local/share/icons/hicolor/512x512/apps" RENAME MusicPlayer.png)
+```
+
+After `make install`, run:
+```bash
+update-desktop-database ~/.local/share/applications
+```
+This registers the MIME type associations without requiring a reboot or root privileges.
+
+
+<div class="page-break"></div>
+
+<a id="03_cpp_foundations.md"></a>
+
 # Chapter 3 — Qt C++ Foundations
 
 Before reading the individual class chapters, you must understand the four pillars of Qt programming that this project relies on heavily.
@@ -594,6 +704,12 @@ QtConcurrent::run([this, path]() {
 - `[this]` — capture the object pointer so you can call `emit`, access members
 - `[=]` — capture everything by value (copy)
 - `[&]` — capture everything by reference (dangerous if the lambda outlives the scope)
+
+
+<div class="page-break"></div>
+
+<a id="04_data_layer.md"></a>
+
 # Chapter 4 — The Data Layer: Track, TrackModel, QAbstractListModel
 
 ## 4.1 The `Track` Struct — The Atom of the Music Library
@@ -617,12 +733,15 @@ struct Track {
     bool hasCoverArt{false};// Does the file have an embedded album image?
     int trackNumber{0};     // Track # on disc (1, 2, 3...)
     int discNumber{0};      // Disc number for multi-disc albums
+    int totalPlayTime{0};   // Cumulative seconds this track has been played
 };
 
 #endif // TRACK_H
 ```
 
 This is a **plain struct** — no QObject, no signals, no methods. It is a pure data container. The `{0}` and `{false}` are **in-class member initializers** (C++11), meaning the values default to zero/false if not set.
+
+The `totalPlayTime` field tracks how many total seconds a user has spent listening to this track. It is persisted in the SQLite database and updated in real-time by the `AudioEngine::playTimeAccumulated` signal (see Chapter 12).
 
 `QVector<Track>` is then the fundamental collection: the entire music library is a vector of these structs.
 
@@ -657,7 +776,8 @@ public:
         GenreRole,                         // 260
         DurationRole,                      // 261
         FilePathRole,                      // 262
-        HasCoverArtRole                    // 263
+        HasCoverArtRole,                   // 263
+        TotalPlayTimeRole                  // 264
     };
 
     explicit TrackModel(QObject *parent = nullptr);
@@ -678,7 +798,12 @@ public slots:
     void filterByAlbum(const QString &album);
     void filterByFolder(const QString &folder);
     void filterByCollection(const QString &collection);
+    void filterByMostPlayed(int limit = 50);
+    void filterByPlaylist(const QString &playlistName, const QStringList &playlistTracks);
+    void updateTrackPlayTime(const QString &filePath, int addedTime);
 
+    Q_INVOKABLE QVariantList getAllTracks() const;
+    Q_INVOKABLE QVariantMap getTrackByPath(const QString &filePath) const;
     Q_INVOKABLE QVariantList getArtistTiles() const;
     Q_INVOKABLE QVariantList getAlbumTiles() const;
     Q_INVOKABLE QVariantList getFolderTiles() const;
@@ -885,6 +1010,87 @@ QVariantList TrackModel::getArtistTiles() const {
 ```
 
 QML receives a JavaScript array of objects: `[ {name: "Queen", hasCoverArt: true, filePath: "..."}, ... ]`.
+
+---
+
+## 4.9 New Filter Methods
+
+### `filterByMostPlayed` — Sort by Play Time
+
+```cpp
+void TrackModel::filterByMostPlayed(int limit) {
+    beginResetModel();
+    m_displayIndices.clear();
+
+    // Collect indices with non-zero play time
+    QVector<QPair<int, int>> indexAndTime;
+    for (int i = 0; i < m_allTracks.size(); ++i) {
+        if (m_allTracks[i].totalPlayTime > 0)
+            indexAndTime.append({i, m_allTracks[i].totalPlayTime});
+    }
+
+    // Sort descending by play time
+    std::sort(indexAndTime.begin(), indexAndTime.end(),
+              [](const auto &a, const auto &b) { return a.second > b.second; });
+
+    for (int i = 0; i < qMin(limit, indexAndTime.size()); ++i)
+        m_displayIndices.append(indexAndTime[i].first);
+
+    endResetModel();
+}
+```
+
+This filters and sorts the display to show only tracks with recorded play time, ordered by most-played first. The `limit` parameter caps the results (default: 50).
+
+### `filterByPlaylist` — Show Playlist Contents
+
+```cpp
+void TrackModel::filterByPlaylist(const QString &playlistName, const QStringList &playlistTracks) {
+    updateDisplayIndices([&playlistTracks](const Track &t) {
+        return playlistTracks.contains(t.filePath);
+    });
+}
+```
+
+Filters the display to show only tracks whose file paths appear in the provided playlist track list.
+
+### `updateTrackPlayTime` — Live Play-Time Updates
+
+```cpp
+void TrackModel::updateTrackPlayTime(const QString &filePath, int addedTime) {
+    for (int i = 0; i < m_allTracks.size(); ++i) {
+        if (m_allTracks[i].filePath == filePath) {
+            m_allTracks[i].totalPlayTime += addedTime;
+            break;
+        }
+    }
+}
+```
+
+This slot is connected to `AudioEngine::playTimeAccumulated` in `main.cpp`. It keeps the in-memory model in sync with database updates, so the "Most Played" filter reflects current play counts without requiring a restart.
+
+### `getAllTracks` — Full Track List for Popups
+
+```cpp
+Q_INVOKABLE QVariantList getAllTracks() const;
+```
+
+Returns every track in the library as a JavaScript array. Used by the playlist "Add Content" popup to display all available tracks regardless of the current filter.
+
+### `getTrackByPath` — Lookup a Single Track
+
+```cpp
+Q_INVOKABLE QVariantMap getTrackByPath(const QString &filePath) const;
+```
+
+Returns metadata for a specific track given its file path. Used to populate the queue and playback UI when only a file path is known.
+
+
+
+<div class="page-break"></div>
+
+<a id="05_library_scanner.md"></a>
+
 # Chapter 5 — LibraryScanner: Tags, Database, and Background Threads
 
 ## 5.1 What LibraryScanner Does
@@ -1000,11 +1206,23 @@ void LibraryScanner::initializeDatabase() {
             "id INTEGER PRIMARY KEY AUTOINCREMENT, "
             "title TEXT, artist TEXT, album TEXT, genre TEXT, "
             "duration INTEGER, filePath TEXT UNIQUE, "   // UNIQUE prevents duplicate paths
-            "hasCoverArt INTEGER, trackNumber INTEGER, discNumber INTEGER)"
+            "hasCoverArt INTEGER, trackNumber INTEGER, discNumber INTEGER, "
+            "totalPlayTime INTEGER DEFAULT 0)"
         );
         // Migration patches — safe to run even if column already exists
         query.exec("ALTER TABLE tracks ADD COLUMN trackNumber INTEGER DEFAULT 0");
         query.exec("ALTER TABLE tracks ADD COLUMN discNumber INTEGER DEFAULT 0");
+        query.exec("ALTER TABLE tracks ADD COLUMN totalPlayTime INTEGER DEFAULT 0");
+
+        // Playlist tables (see Chapter 9)
+        query.exec("CREATE TABLE IF NOT EXISTS playlists ("
+                   "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                   "name TEXT UNIQUE)");
+        query.exec("CREATE TABLE IF NOT EXISTS playlist_tracks ("
+                   "playlist_id INTEGER, "
+                   "track_path TEXT, "
+                   "position INTEGER, "
+                   "FOREIGN KEY(playlist_id) REFERENCES playlists(id))");
     }
 }
 ```
@@ -1019,13 +1237,14 @@ void LibraryScanner::initializeDatabase() {
 void LibraryScanner::loadDatabase() {
     QVector<Track> loadedTracks;
     QSqlQuery query("SELECT title, artist, album, genre, duration, filePath, "
-                    "hasCoverArt, trackNumber, discNumber FROM tracks");
+                    "hasCoverArt, trackNumber, discNumber, totalPlayTime FROM tracks");
 
     while (query.next()) {          // Iterate over rows
         Track t;
-        t.title      = query.value(0).toString();
-        t.artist     = query.value(1).toString();
+        t.title         = query.value(0).toString();
+        t.artist        = query.value(1).toString();
         // ... etc
+        t.totalPlayTime = query.value(9).toInt();
         loadedTracks.append(t);
     }
 
@@ -1047,8 +1266,10 @@ db.transaction();     // Begin a batch — much faster than individual INSERTs
 QSqlQuery insertQuery(db);
 insertQuery.prepare(
     "INSERT OR REPLACE INTO tracks "
-    "(title, artist, album, genre, duration, filePath, hasCoverArt, trackNumber, discNumber) "
-    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    "(title, artist, album, genre, duration, filePath, hasCoverArt, "
+    "trackNumber, discNumber, totalPlayTime) "
+    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "
+    "COALESCE((SELECT totalPlayTime FROM tracks WHERE filePath = ?), 0))"
 );
 
 for (const Track &t : newTracks) {
@@ -1056,12 +1277,15 @@ for (const Track &t : newTracks) {
     insertQuery.bindValue(1, t.artist);
     // ...
     insertQuery.bindValue(5, t.filePath);
+    insertQuery.bindValue(9, t.filePath);  // For the COALESCE subquery
     insertQuery.exec();
 }
 db.commit();   // Commit all at once — 10x - 100x faster than commit per row
 ```
 
 `INSERT OR REPLACE` means: if a row with this `filePath` already exists (UNIQUE constraint), replace it. This makes re-scanning idempotent.
+
+The `COALESCE` subquery preserves the existing `totalPlayTime` value when a track is re-inserted during rescan. Without it, re-scanning a directory would reset all play counts to zero.
 
 ---
 
@@ -1166,6 +1390,89 @@ User clicks "Scan Directory" in UI
   emit scanFinished(total)
          ↓ (QML closes spinner popup)
 ```
+
+---
+
+## 5.7 Deleted File Cleanup on Rescan
+
+When a user deletes music files from their filesystem and then rescans the directory, those deleted tracks would previously remain in the database forever — appearing as ghost entries in the library that could no longer be played.
+
+The scanner now automatically detects and removes these orphaned entries:
+
+```cpp
+// After inserting all found tracks into the DB, within the same transaction:
+QSqlQuery cleanupQuery(db);
+QString searchPath = path;
+if (!searchPath.endsWith('/')) searchPath += '/';
+
+cleanupQuery.prepare("SELECT filePath FROM tracks WHERE filePath LIKE ?");
+cleanupQuery.bindValue(0, searchPath + "%");
+cleanupQuery.exec();
+
+QStringList toDelete;
+while (cleanupQuery.next()) {
+    QString fp = cleanupQuery.value(0).toString();
+    if (!QFile::exists(fp)) {
+        toDelete.append(fp);
+    }
+}
+
+if (!toDelete.isEmpty()) {
+    QSqlQuery deleteQuery(db);
+    deleteQuery.prepare("DELETE FROM tracks WHERE filePath = ?");
+    for (const QString &fp : toDelete) {
+        deleteQuery.bindValue(0, fp);
+        deleteQuery.exec();
+    }
+}
+```
+
+The cleanup is scoped to the directory being scanned (`WHERE filePath LIKE '/scanned/path/%'`). This means:
+- Only tracks under the rescanned directory are checked
+- Tracks from other directories remain untouched
+- The `QFile::exists()` check runs on the background thread, so the UI stays responsive
+
+---
+
+## 5.8 Play-Time Tracking: `updatePlayTime`
+
+The `updatePlayTime` slot is called by `AudioEngine::playTimeAccumulated` (wired in `main.cpp`) to persist listening time:
+
+```cpp
+void LibraryScanner::updatePlayTime(const QString &filePath, int secondsAdded) {
+    if (secondsAdded <= 0 || filePath.isEmpty()) return;
+
+    // Update in memory
+    for (int i = 0; i < m_tracks.size(); ++i) {
+        if (m_tracks[i].filePath == filePath) {
+            m_tracks[i].totalPlayTime += secondsAdded;
+            break;
+        }
+    }
+
+    // Update in DB
+    QSqlDatabase db = QSqlDatabase::database();
+    if (db.isOpen()) {
+        QSqlQuery query(db);
+        query.prepare("UPDATE tracks SET totalPlayTime = totalPlayTime + ? WHERE filePath = ?");
+        query.bindValue(0, secondsAdded);
+        query.bindValue(1, filePath);
+        query.exec();
+    }
+}
+```
+
+This dual update (memory + database) ensures:
+- The in-memory model stays current for the "Most Played" filter
+- The database is durable across restarts
+- The `totalPlayTime` column is atomically incremented using SQL (`totalPlayTime + ?`), avoiding race conditions
+
+
+
+<div class="page-break"></div>
+
+<a id="06_audio_engine.md"></a>
+
 # Chapter 6 — AudioEngine: Playing Sound with miniaudio
 
 ## 6.1 What is miniaudio?
@@ -1494,6 +1801,12 @@ AudioEngine::~AudioEngine() {
 ```
 
 Always clean up in reverse order of initialization. The `ma_peak_node` instances are attached to the node graph, which is part of `m_engine`, so they are cleaned up when `ma_engine_uninit` is called.
+
+
+<div class="page-break"></div>
+
+<a id="07_equalizer.md"></a>
+
 # Chapter 7 — The Equalizer: Presets and QSettings
 
 ## 7.1 What is a Graphic Equalizer?
@@ -1751,6 +2064,12 @@ void AudioEngine::onEqualizerEnabledChanged(bool enabled) {
 ```
 
 If EQ is disabled, `actualGain = 0.0f` regardless of stored values — the filter is flat.
+
+
+<div class="page-break"></div>
+
+<a id="08_cover_art.md"></a>
+
 # Chapter 8 — CoverArtProvider: On-Demand Album Art
 
 ## 8.1 The Problem
@@ -1789,20 +2108,22 @@ public:
     CoverArtProvider();
     QImage requestImage(const QString &id, QSize *size,
                         const QSize &requestedSize) override;
+
+    static QImage extractImageFromTag(const QString &filePath);
 };
 ```
 
 Note: `CoverArtProvider` does **not** inherit from `QObject`. It inherits from `QQuickImageProvider` instead. It therefore has **no signals or slots** and does not use `Q_OBJECT`.
 
+The `static extractImageFromTag()` method was added so that other C++ classes (specifically `MprisManager`, see Chapter 10) can extract album art from audio files without needing access to the QML image provider system.
+
 ---
 
 ## 8.4 Full Implementation
 
-```cpp
-CoverArtProvider::CoverArtProvider()
-    : QQuickImageProvider(QQuickImageProvider::Image)  // We return QImage objects
-{}
+The `requestImage` method now delegates the actual TagLib extraction to the static helper:
 
+```cpp
 QImage CoverArtProvider::requestImage(const QString &id, QSize *size,
                                        const QSize &requestedSize)
 {
@@ -1819,6 +2140,29 @@ QImage CoverArtProvider::requestImage(const QString &id, QSize *size,
         return image;
     };
 
+    // Delegate to the static extraction method
+    image = extractImageFromTag(filePath);
+
+    // Fallback: if no art found (or null image), return a dark placeholder
+    if (image.isNull()) {
+        image = QImage(200, 200, QImage::Format_RGB32);
+        image.fill(QColor("#33333b"));  // dark neutral gray
+    }
+
+    return returnImage();
+}
+```
+
+---
+
+## 8.5 The Static Extraction Method
+
+`extractImageFromTag` contains the format-specific TagLib logic to pull cover art from audio files. It returns a `QImage` — either the decoded art, or a null `QImage` if none was found:
+
+```cpp
+QImage CoverArtProvider::extractImageFromTag(const QString &filePath) {
+    QImage image;
+
     // --- MP3: Read APIC (Attached Picture) frame from ID3v2 tag ---
     if (filePath.endsWith(".mp3", Qt::CaseInsensitive)) {
         TagLib::MPEG::File mpegFile(filePath.toUtf8().constData());
@@ -1829,7 +2173,6 @@ QImage CoverArtProvider::requestImage(const QString &id, QSize *size,
                 if (!frameList.isEmpty()) {
                     auto frame = static_cast<TagLib::ID3v2::AttachedPictureFrame *>(
                         frameList.front());
-                    // frame->picture() returns raw JPEG/PNG bytes
                     image.loadFromData(
                         (const uchar *)frame->picture().data(),
                         frame->picture().size()
@@ -1867,19 +2210,21 @@ QImage CoverArtProvider::requestImage(const QString &id, QSize *size,
         }
     }
 
-    // Fallback: if no art found (or null image), return a dark placeholder
-    if (image.isNull()) {
-        image = QImage(200, 200, QImage::Format_RGB32);
-        image.fill(QColor("#33333b"));  // dark neutral gray
-    }
-
-    return returnImage();
+    return image;  // Returns null QImage if no art was found
 }
 ```
 
+This method is `static` so it can be called without an instance of `CoverArtProvider`:
+```cpp
+// From MprisManager (Chapter 10):
+QImage cover = CoverArtProvider::extractImageFromTag(filePath);
+```
+
+The key design decision: `extractImageFromTag` does **not** apply a fallback placeholder. Only the QML-facing `requestImage` method does that. This way, callers like `MprisManager` can distinguish "no art found" (null image) from a real image and handle it accordingly.
+
 ---
 
-## 8.5 Registering the Provider in main.cpp
+## 8.6 Registering the Provider in main.cpp
 
 ```cpp
 QQmlApplicationEngine engine;
@@ -1890,7 +2235,7 @@ This registers the provider under the name `"musiccover"`, which matches the `im
 
 ---
 
-## 8.6 Optimizing: sourceSize in QML
+## 8.7 Optimizing: sourceSize in QML
 
 In the queue drawer and track list, album art is shown at small sizes (40×40 px). Without a `sourceSize`, Qt would load the full 500×500 JPEG and scale it in the GPU. With it:
 
@@ -1906,165 +2251,972 @@ Image {
 ```
 
 `sourceSize` is passed as `requestedSize` to `requestImage()`. The `returnImage` lambda scales the decoded image to this size before returning — saving GPU memory and improving render performance.
-# Chapter 9 — main.cpp: Wiring Everything Together
+
+
+
+<div class="page-break"></div>
+
+<a id="09_playlist_system.md"></a>
+
+# Chapter 9 — The Playlist System
+
+## 9.1 What the Playlist System Does
+
+The playlist system allows users to:
+1. Create named playlists
+2. Add tracks from the library to playlists
+3. Remove individual tracks from a playlist
+4. Reorder tracks within a playlist via drag-and-drop
+5. Sort playlist contents by title, artist, or track number
+6. Delete entire playlists
+
+All playlist data is stored in the same SQLite database as the music library (see Chapter 5), using two dedicated tables.
+
+---
+
+## 9.2 SQLite Schema
+
+### The `playlists` Table
+
+```sql
+CREATE TABLE IF NOT EXISTS playlists (
+    id   INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE
+);
+```
+
+Each playlist is simply a named entry. The `UNIQUE` constraint prevents duplicate names.
+
+### The `playlist_tracks` Table
+
+```sql
+CREATE TABLE IF NOT EXISTS playlist_tracks (
+    playlist_id INTEGER,
+    track_path  TEXT,
+    position    INTEGER,
+    FOREIGN KEY(playlist_id) REFERENCES playlists(id)
+);
+```
+
+Tracks belong to a playlist via `playlist_id`. The `position` column maintains ordering — this is what allows manual reordering without changing the data itself. The `track_path` stores the absolute file path, linking back to the `tracks.filePath` column.
+
+---
+
+## 9.3 PlaylistManager — The C++ Backend
+
+### Header: `include/playlist_manager.h`
+
+```cpp
+class PlaylistManager : public QObject {
+    Q_OBJECT
+public:
+    explicit PlaylistManager(QObject *parent = nullptr);
+
+    Q_INVOKABLE QStringList getPlaylists() const;
+    Q_INVOKABLE QStringList getPlaylistTracks(const QString &playlistName) const;
+
+    Q_INVOKABLE void createPlaylist(const QString &name);
+    Q_INVOKABLE void deletePlaylist(const QString &name);
+    Q_INVOKABLE void addTrack(const QString &playlistName, const QString &trackPath);
+    Q_INVOKABLE void removeTrack(const QString &playlistName, const QString &trackPath);
+    Q_INVOKABLE void moveTrack(const QString &playlistName, int fromIndex, int toIndex);
+    Q_INVOKABLE void sortPlaylist(const QString &playlistName, const QString &sortType);
+
+signals:
+    void playlistsChanged();
+    void playlistTracksChanged(const QString &playlistName);
+
+private:
+    int getPlaylistId(const QString &name) const;
+};
+```
+
+Every public method is `Q_INVOKABLE`, making them callable directly from QML:
+```qml
+playlistManager.createPlaylist("Road Trip Jams")
+playlistManager.addTrack("Road Trip Jams", track.filePath)
+```
+
+### The Two Signals
+
+| Signal | Emitted When | QML Response |
+|---|---|---|
+| `playlistsChanged()` | A playlist is created or deleted | PlaylistsView refreshes its grid |
+| `playlistTracksChanged(name)` | A track is added, removed, moved, or sorted | PlaylistDetailsView refreshes its track list |
+
+---
+
+## 9.4 Key Operations
+
+### Creating a Playlist
+
+```cpp
+void PlaylistManager::createPlaylist(const QString &name) {
+    if (name.isEmpty()) return;
+    QSqlQuery query;
+    query.prepare("INSERT INTO playlists (name) VALUES (?)");
+    query.bindValue(0, name);
+    if (query.exec()) {
+        emit playlistsChanged();
+    }
+}
+```
+
+### Adding a Track (With Duplicate Prevention)
+
+```cpp
+void PlaylistManager::addTrack(const QString &playlistName, const QString &trackPath) {
+    int pid = getPlaylistId(playlistName);
+    if (pid == -1) return;
+
+    // Check if already exists
+    QSqlQuery checkQuery;
+    checkQuery.prepare("SELECT position FROM playlist_tracks WHERE playlist_id = ? AND track_path = ?");
+    checkQuery.bindValue(0, pid);
+    checkQuery.bindValue(1, trackPath);
+    if (checkQuery.exec() && checkQuery.next()) return;  // Already in playlist
+
+    // Find next position
+    int maxPos = 0;
+    QSqlQuery posQuery;
+    posQuery.prepare("SELECT MAX(position) FROM playlist_tracks WHERE playlist_id = ?");
+    posQuery.bindValue(0, pid);
+    if (posQuery.exec() && posQuery.next())
+        maxPos = posQuery.value(0).toInt() + 1;
+
+    QSqlQuery query;
+    query.prepare("INSERT INTO playlist_tracks (playlist_id, track_path, position) VALUES (?, ?, ?)");
+    query.bindValue(0, pid);
+    query.bindValue(1, trackPath);
+    query.bindValue(2, maxPos);
+    if (query.exec()) emit playlistTracksChanged(playlistName);
+}
+```
+
+### Reordering Tracks
+
+Track reordering works by fetching all paths in order, performing an in-memory list move, then rewriting all positions in a transaction:
+
+```cpp
+void PlaylistManager::moveTrack(const QString &playlistName, int fromIndex, int toIndex) {
+    QStringList tracks = getPlaylistTracks(playlistName);
+    QString track = tracks.takeAt(fromIndex);
+    tracks.insert(toIndex, track);
+
+    // Rewrite all positions in a transaction
+    db.transaction();
+    // DELETE all rows for this playlist
+    // INSERT them back with new position values
+    db.commit();
+    emit playlistTracksChanged(playlistName);
+}
+```
+
+### Sorting a Playlist
+
+Sorting uses a SQL `JOIN` with the `tracks` table to access metadata:
+
+```cpp
+// Sort by title:
+"SELECT pt.track_path FROM playlist_tracks pt "
+"JOIN tracks t ON pt.track_path = t.filePath "
+"WHERE pt.playlist_id = ? ORDER BY t.title ASC"
+
+// Sort by artist:
+"... ORDER BY t.artist ASC, t.title ASC"
+
+// Sort by track number:
+"... ORDER BY t.trackNumber ASC, t.title ASC"
+```
+
+The joined result is then written back with updated position values, just like `moveTrack`.
+
+---
+
+## 9.5 QML Views
+
+### PlaylistsView.qml — The Playlist Grid
+
+Displays a grid of playlist tiles. Each tile shows the playlist name and can be right-clicked for a context menu (rename, delete). Clicking a tile navigates to `PlaylistDetailsView`.
+
+### PlaylistDetailsView.qml — Track List
+
+Shows all tracks in a single playlist with:
+- Track metadata (title, artist, cover art)
+- "Add Content" button to open the add-to-playlist popup
+- Track removal on right-click
+- Reordering support
+
+### PlaylistPopup.qml — Centralized Popups
+
+Contains three popups managed as a single component:
+
+| Popup | Purpose |
+|---|---|
+| `addPopup` | Shows all library tracks with "Add" buttons next to each |
+| `createPlaylistPopup` | Text field + "Create" button to make a new playlist |
+| `playlistMenuPopup` | Right-click context menu (Open, Add Songs, Rename, Delete) |
+
+These are instantiated inside `AppPopups.qml` and exposed globally via aliases in `main.qml` (see Chapter 19).
+
+---
+
+## 9.6 Signal Flow: Creating and Populating a Playlist
+
+```
+User clicks "Create" button in PlaylistsView
+         ↓
+QML calls: playlistManager.createPlaylist("My Playlist")
+         ↓
+PlaylistManager::createPlaylist() inserts into DB
+         ↓
+emit playlistsChanged()
+         ↓
+PlaylistsView.qml listens for playlistsChanged → refreshes grid
+         ↓
+User clicks tile → opens PlaylistDetailsView
+         ↓
+User clicks "Add Content" → opens addPopup
+         ↓
+User clicks "Add" next to a track
+         ↓
+QML calls: playlistManager.addTrack("My Playlist", track.filePath)
+         ↓
+emit playlistTracksChanged("My Playlist")
+         ↓
+PlaylistDetailsView refreshes its track list
+```
+
+
+<div class="page-break"></div>
+
+<a id="10_mpris_integration.md"></a>
+
+# Chapter 10 — MPRIS2 Integration: Desktop Media Controls
+
+## 10.1 What Is MPRIS?
+
+**MPRIS** (Media Player Remote Interfacing Specification) is a D-Bus protocol that lets Linux desktop environments control media players. When you see the media widget in KDE Plasma's system tray — showing album art, track title, and play/pause/next buttons — that widget is talking to the player via MPRIS over D-Bus.
+
+Without MPRIS:
+- The OS doesn't know any audio is playing
+- Hardware media keys (play/pause, next, previous) don't work
+- Lock screen widgets can't show "Now Playing" information
+- KDE Plasma's media integration panel is empty
+
+---
+
+## 10.2 The D-Bus Service
+
+MPRIS requires registering a D-Bus service with a specific naming convention:
+
+```cpp
+QDBusConnection dbus = QDBusConnection::sessionBus();
+dbus.registerObject("/org/mpris/MediaPlayer2", this,
+                    QDBusConnection::ExportAdaptors);
+dbus.registerService("org.mpris.MediaPlayer2.MLMPlayer");
+```
+
+The service name must begin with `org.mpris.MediaPlayer2.` followed by a unique player name. The object is registered at the standard MPRIS path `/org/mpris/MediaPlayer2`.
+
+---
+
+## 10.3 Architecture: Manager + Two Adaptors
+
+The MPRIS implementation uses Qt's D-Bus adaptor pattern:
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                   MprisManager (QObject)                      │
+│   - Holds state: m_playbackStatus, m_metadata, m_position    │
+│   - Has slots: setPlaybackStatus(), setMetadata()            │
+│   - Has signals: playRequested(), pauseRequested(), etc.     │
+│                                                              │
+│   ┌─────────────────────────┐ ┌────────────────────────────┐ │
+│   │   MprisRootAdaptor      │ │   MprisPlayerAdaptor       │ │
+│   │   (QDBusAbstractAdaptor)│ │   (QDBusAbstractAdaptor)   │ │
+│   │                         │ │                            │ │
+│   │   Interface:            │ │   Interface:               │ │
+│   │   org.mpris.             │ │   org.mpris.               │ │
+│   │     MediaPlayer2        │ │     MediaPlayer2.Player    │ │
+│   │                         │ │                            │ │
+│   │   Properties:           │ │   Properties:              │ │
+│   │   - Identity            │ │   - PlaybackStatus         │ │
+│   │   - CanQuit             │ │   - Metadata               │ │
+│   │   - CanRaise            │ │   - Position               │ │
+│   │   - DesktopEntry        │ │   - CanGoNext/Previous     │ │
+│   │                         │ │   - CanPlay/Pause/Seek     │ │
+│   │   Methods:              │ │                            │ │
+│   │   - Quit()              │ │   Methods:                 │ │
+│   │   - Raise()             │ │   - Play(), Pause()        │ │
+│   └─────────────────────────┘ │   - Next(), Previous()     │ │
+│                               │   - Seek(), SetPosition()  │ │
+│                               └────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────┘
+```
+
+Qt's `QDBusAbstractAdaptor` automatically exports `Q_PROPERTY` declarations and `Q_SLOT` methods over D-Bus. The `Q_CLASSINFO("D-Bus Interface", "...")` macro maps the class to the correct MPRIS interface name.
+
+---
+
+## 10.4 The Root Adaptor
+
+```cpp
+class MprisRootAdaptor : public QDBusAbstractAdaptor {
+    Q_OBJECT
+    Q_CLASSINFO("D-Bus Interface", "org.mpris.MediaPlayer2")
+    Q_PROPERTY(bool CanQuit READ CanQuit)
+    Q_PROPERTY(bool CanRaise READ CanRaise)
+    Q_PROPERTY(bool HasTrackList READ HasTrackList)
+    Q_PROPERTY(QString Identity READ Identity)
+    Q_PROPERTY(QString DesktopEntry READ DesktopEntry)
+
+public:
+    bool CanQuit() const { return false; }
+    bool CanRaise() const { return false; }
+    bool HasTrackList() const { return false; }
+    QString Identity() const { return "MLM Player"; }
+    QString DesktopEntry() const { return "MusicPlayer"; }
+
+public slots:
+    void Quit() {}
+    void Raise() {}
+};
+```
+
+The `DesktopEntry` property must match the `.desktop` file name (without the `.desktop` extension). This is how the OS associates the D-Bus service with the correct application icon.
+
+---
+
+## 10.5 The Player Adaptor
+
+```cpp
+class MprisPlayerAdaptor : public QDBusAbstractAdaptor {
+    Q_OBJECT
+    Q_CLASSINFO("D-Bus Interface", "org.mpris.MediaPlayer2.Player")
+    Q_PROPERTY(QString PlaybackStatus READ PlaybackStatus)
+    Q_PROPERTY(QVariantMap Metadata READ Metadata)
+    Q_PROPERTY(qlonglong Position READ Position)
+    // ... CanGoNext, CanPlay, CanPause, CanSeek, etc.
+
+public:
+    QString PlaybackStatus() const { return m_manager->m_playbackStatus; }
+    QVariantMap Metadata() const { return m_manager->m_metadata; }
+    qlonglong Position() const {
+        return static_cast<qlonglong>(m_manager->m_positionSeconds) * 1000000LL;
+    }
+
+public slots:
+    void Play() { emit m_manager->playRequested(); }
+    void Pause() { emit m_manager->pauseRequested(); }
+    void PlayPause() { emit m_manager->playPauseRequested(); }
+    void Next() { emit m_manager->nextRequested(); }
+    void Previous() { emit m_manager->previousRequested(); }
+    void Seek(qlonglong Offset) {
+        emit m_manager->seekRequested(m_manager->m_positionSeconds + Offset / 1000000LL);
+    }
+    void SetPosition(const QDBusObjectPath &, qlonglong Position) {
+        emit m_manager->seekRequested(Position / 1000000LL);
+    }
+};
+```
+
+**Important:** MPRIS uses **microseconds** for position and length. Our `AudioEngine` uses **seconds**. The conversions (`* 1000000LL` and `/ 1000000LL`) happen at the MPRIS boundary.
+
+---
+
+## 10.6 Broadcasting Metadata with Cover Art
+
+When a track starts playing, QML calls `mprisManager.setMetadata(...)`. The implementation constructs a D-Bus-compliant metadata map and extracts cover art:
+
+```cpp
+void MprisManager::setMetadata(const QString &id, const QString &title,
+                               const QString &artist, const QString &album,
+                               const QString &artUrl, int lengthSeconds) {
+    QVariantMap metadata;
+    metadata["mpris:trackid"] = QVariant::fromValue(
+        QDBusObjectPath("/org/mpris/MediaPlayer2/TrackList/NoTrack"));
+    metadata["xesam:title"]  = title;
+    metadata["xesam:artist"] = QStringList() << artist;
+    metadata["xesam:album"]  = album;
+
+    // Cover art extraction
+    QString finalArtUrl = artUrl;
+    if (finalArtUrl.isEmpty() && !id.isEmpty()) {
+        QImage cover = CoverArtProvider::extractImageFromTag(id);
+        if (!cover.isNull()) {
+            QString tempDir = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
+            QString hash = QCryptographicHash::hash(id.toUtf8(), QCryptographicHash::Md5).toHex();
+            QString tempFile = tempDir + "/mlm_mpris_cover_" + hash + ".png";
+            cover.save(tempFile, "PNG");
+            finalArtUrl = "file://" + tempFile;
+        }
+    }
+
+    if (!finalArtUrl.isEmpty()) {
+        metadata["mpris:artUrl"] = finalArtUrl;
+    }
+    metadata["mpris:length"] = static_cast<qlonglong>(lengthSeconds) * 1000000LL;
+
+    m_metadata = metadata;
+    updateProperties("org.mpris.MediaPlayer2.Player", {{"Metadata", m_metadata}});
+}
+```
+
+### Why Per-Track Hash Filenames?
+
+Desktop environments (especially KDE Plasma) **cache cover art aggressively** based on the `mpris:artUrl` value. If every track's art is saved to the same filename (`/tmp/mlm_cover.png`), the URL doesn't change between tracks, and Plasma shows stale artwork.
+
+The solution: generate a unique filename per track using an MD5 hash of the file path:
+```
+/tmp/mlm_mpris_cover_38f29e4a1b7c...png
+```
+
+When the track changes, a new URL is emitted → Plasma drops its cache → fresh art appears.
+
+---
+
+## 10.7 Property Change Notifications
+
+D-Bus properties don't auto-notify. We must manually emit the `org.freedesktop.DBus.Properties.PropertiesChanged` signal:
+
+```cpp
+void MprisManager::updateProperties(const QString &interface,
+                                    const QVariantMap &changed) {
+    QDBusMessage msg = QDBusMessage::createSignal(
+        "/org/mpris/MediaPlayer2", "org.freedesktop.DBus.Properties",
+        "PropertiesChanged");
+    msg << interface << changed << QStringList();
+    QDBusConnection::sessionBus().send(msg);
+}
+```
+
+The third argument (empty `QStringList`) is the list of invalidated properties — we always send the new values directly, so this is empty.
+
+---
+
+## 10.8 Signal Flow: QML → MPRIS → Desktop
+
+```
+Track starts playing in QML
+         ↓
+QML calls: mprisManager.setMetadata(track.filePath, track.title, track.artist, ...)
+         ↓
+MprisManager::setMetadata():
+  - Builds QVariantMap with xesam:title, xesam:artist, xesam:album
+  - Extracts cover art via CoverArtProvider::extractImageFromTag()
+  - Saves art to /tmp/mlm_mpris_cover_<hash>.png
+  - Sets mpris:artUrl = "file:///tmp/mlm_mpris_cover_<hash>.png"
+  - Emits PropertiesChanged over D-Bus
+         ↓
+KDE Plasma receives PropertiesChanged
+         ↓
+Media widget updates: shows title, artist, album art
+```
+
+```
+User presses Play/Pause media key on keyboard
+         ↓
+KDE Plasma sends D-Bus call to org.mpris.MediaPlayer2.Player.PlayPause()
+         ↓
+MprisPlayerAdaptor::PlayPause() → emit m_manager->playPauseRequested()
+         ↓
+(Wired in main.cpp) → audioEngine.play() or audioEngine.pause()
+         ↓
+QML receives isPlaying change → updates UI
+```
+
+---
+
+## 10.9 Testing MPRIS
+
+```bash
+# Check if the service is registered
+qdbus org.mpris.MediaPlayer2.MLMPlayer
+
+# Read current metadata
+qdbus org.mpris.MediaPlayer2.MLMPlayer /org/mpris/MediaPlayer2 \
+      org.freedesktop.DBus.Properties.Get \
+      org.mpris.MediaPlayer2.Player Metadata
+
+# Send a PlayPause command
+qdbus org.mpris.MediaPlayer2.MLMPlayer /org/mpris/MediaPlayer2 \
+      org.mpris.MediaPlayer2.Player.PlayPause
+```
+
+
+<div class="page-break"></div>
+
+<a id="11_gamepad_control.md"></a>
+
+# Chapter 11 — Gamepad Control
+
+## 11.1 What the Gamepad System Does
+
+The gamepad system allows users to navigate the entire application using a game controller (Xbox, PlayStation, or any SDL2-compatible gamepad). This enables a "lean-back" or "couch mode" experience where the keyboard and mouse are not required.
+
+Features:
+- Full D-pad and left-stick navigation through library grids, queues, and menus
+- A/B/X/Y button mapping for confirm, back, and context actions
+- Trigger-based volume control (hold L/R trigger to decrease/increase volume)
+- Automatic hot-plug detection (connect/disconnect a controller at any time)
+- Zone-based input routing so buttons do different things depending on which UI element is active
+
+---
+
+## 11.2 Architecture: C++ Polling + QML Routing
+
+The system is split into two layers:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  GamepadController (C++ / SDL2)                          │
+│  - Initializes SDL2 gamepad subsystem                    │
+│  - Polls for button/axis events every 16ms (~60 Hz)      │
+│  - Emits Qt signals: buttonA(), dpadUp(), volumeChange() │
+│  - Handles hot-plug (device added/removed)               │
+└──────────────────────────┬──────────────────────────────┘
+                           │ Qt signals
+┌──────────────────────────▼──────────────────────────────┐
+│  GamepadControl.qml (QML)                                │
+│  - Receives signals via Connections { target: gamepad }  │
+│  - Maintains a "currentZone" string                      │
+│  - Routes each signal to the correct UI action           │
+│    based on which zone is currently active                │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 11.3 The C++ Layer: `GamepadController`
+
+### Initialization
+
+```cpp
+GamepadController::GamepadController(QObject *parent) : QObject(parent) {
+    SDL_Init(SDL_INIT_GAMECONTROLLER);
+
+    // Start a 16ms poll timer (~60 Hz)
+    connect(&m_pollTimer, &QTimer::timeout, this, &GamepadController::pollEvents);
+    m_pollTimer.start(16);
+}
+```
+
+SDL2 does not use callbacks like Qt — it uses a polling model. We bridge this with a `QTimer` that calls `pollEvents()` every frame.
+
+### Button and Axis Signals
+
+The controller emits one signal per logical input:
+
+| Signal | Triggered By |
+|---|---|
+| `buttonA()` | A / Cross button |
+| `buttonB()` | B / Circle button |
+| `buttonX()` | X / Square button |
+| `buttonY()` | Y / Triangle button |
+| `dpadUp/Down/Left/Right()` | D-pad directions |
+| `leftStickUp/Down/Left/Right()` | Left analog stick (with deadzone) |
+| `triggerLeft/Right()` | L2/R2 triggers |
+| `leftShoulder/rightShoulder()` | L1/R1 bumpers |
+| `buttonStart/Select()` | Start/Select (Menu/View) |
+| `volumeChange(delta)` | Continuous trigger hold |
+
+### Deadzone Handling
+
+Analog sticks produce continuous values even when "at rest" due to hardware imprecision. A deadzone of 8000 (out of 32768 max) prevents phantom inputs:
+
+```cpp
+int m_deadzone = 8000;
+
+// In pollEvents():
+Sint16 axisX = SDL_GameControllerGetAxis(m_controller, SDL_CONTROLLER_AXIS_LEFTX);
+if (axisX > m_deadzone && !m_axisX_positive) {
+    m_axisX_positive = true;
+    emit leftStickRight();
+} else if (axisX < m_deadzone) {
+    m_axisX_positive = false;
+}
+```
+
+The boolean tracking (`m_axisX_positive`) ensures the signal fires once when the stick crosses the threshold, not continuously every 16ms.
+
+### Hot-Plug Detection
+
+```cpp
+case SDL_CONTROLLERDEVICEADDED:
+    handleDeviceAdded(event.cdevice.which);
+    break;
+case SDL_CONTROLLERDEVICEREMOVED:
+    handleDeviceRemoved(event.cdevice.which);
+    break;
+```
+
+When a controller is plugged in, `handleDeviceAdded` opens it and emits `connectionChanged(true)`. When unplugged, `handleDeviceRemoved` closes it and emits `connectionChanged(false)`. QML can bind to `gamepad.isConnected` to show/hide gamepad UI hints.
+
+---
+
+## 11.4 The QML Layer: `GamepadControl.qml`
+
+### Zone-Based Navigation
+
+The central concept is the **zone** — a string that identifies which part of the UI is currently active:
+
+```qml
+property string currentZone: "LibraryGrid"
+
+function evaluateZone() {
+    if (eqPopup && eqPopup.opened)           currentZone = "EqPopup";
+    else if (mainMenuPopup && mainMenuPopup.opened)  currentZone = "MainMenu";
+    else if (queueDrawer && queueDrawer.opened)      currentZone = "QueueDrawer";
+    else if (nowPlayingPopup && nowPlayingPopup.opened) currentZone = "NowPlaying";
+    else if (launchMode === "Library")       currentZone = "LibraryGrid";
+    else                                     currentZone = "NowPlaying";
+}
+```
+
+The zone is re-evaluated whenever a popup opens or closes, or when the user navigates between views. Each signal handler then switches on the zone:
+
+```qml
+function onDpadUp() {
+    evaluateZone();
+    if (currentZone === "LibraryGrid")
+        navigateGrid(-columnsCount);      // Move up one row
+    else if (currentZone === "QueueDrawer")
+        navigateQueue(-1);                // Move up one item
+    else if (currentZone === "EqPopup")
+        adjustSlider(+1);                 // Increase EQ band
+}
+```
+
+### Button Mapping
+
+| Button | Zone: LibraryGrid | Zone: QueueDrawer | Zone: NowPlaying |
+|---|---|---|---|
+| **A** | Select tile / Play track | Play selected track | Toggle play/pause |
+| **B** | Close filter / Back | Close drawer | Close overlay |
+| **X** | Open queue | — | — |
+| **Y** | Open now playing | — | Open EQ |
+| **Start** | Open main menu | — | — |
+| **D-pad** | Navigate grid | Navigate list | Seek / Volume |
+
+### Volume Control via Triggers
+
+Holding a trigger continuously adjusts volume:
+
+```qml
+Connections {
+    target: gamepad
+    function onVolumeChange(delta) {
+        audioEngine.setVolume(Math.max(0, Math.min(1, audioEngine.volume + delta)));
+    }
+}
+```
+
+The C++ side emits `volumeChange(delta)` with small increments (~0.02) while the trigger is held, providing smooth volume ramping.
+
+---
+
+## 11.5 Dependencies
+
+The gamepad system requires:
+- **SDL2 development library**: `pkg_check_modules(SDL2 REQUIRED sdl2)` in CMakeLists.txt
+- **Linking**: `${SDL2_LIBRARIES}` and `dl pthread m` in `target_link_libraries`
+
+SDL2 is used only for gamepad input — audio playback uses miniaudio (Chapter 6).
+
+
+<div class="page-break"></div>
+
+<a id="12_main_bridge.md"></a>
+
+# Chapter 12 — main.cpp: Wiring Everything Together
 
 `main.cpp` is the entry point of the application. It is intentionally short — its only job is to **create the backend objects, connect them to each other, expose them to QML, and launch the engine**.
 
-## 9.1 The Full main.cpp Annotated
+## 12.1 The Full main.cpp — Annotated
 
 ```cpp
 #include <QApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QQmlEngine>
 
 #include "audio_engine.h"
 #include "cover_art_provider.h"
 #include "library_scanner.h"
 #include "track_model.h"
+#include "gamepad_controller.h"
+#include "playlist_manager.h"
+#include "mpris_manager.h"
 
+#include <QtNetwork/QLocalServer>
+#include <QtNetwork/QLocalSocket>
 #include <taglib/tdebuglistener.h>
 
-// ─── Step 1: Silence TagLib's debug output ───────────────────────────────────
-// TagLib prints diagnostic messages to the console. This custom listener
-// swallows them so our terminal stays clean during development.
+// ─── Step 1: Silence TagLib debug output ────────────────────────────────────
 class SilentTagLibListener : public TagLib::DebugListener {
 public:
     void printMessage(const TagLib::String &msg) override {
-        // Intentionally empty — suppress all messages
+        // Intentionally empty
     }
 };
 
 int main(int argc, char *argv[]) {
-    // Register the silent listener before anything else runs
     static SilentTagLibListener silentListener;
     TagLib::setDebugListener(&silentListener);
 
-    // ─── Step 2: High DPI support for Qt5 ───────────────────────────────────
-    // Qt6 enables this automatically; Qt5 needs an explicit attribute.
+    // ─── Step 2: High DPI support ────────────────────────────────────────────
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 #endif
 
-    // ─── Step 3: Force the Material Dark theme ──────────────────────────────
-    // These environment variables must be set BEFORE QApplication is created.
-    // If set after, they have no effect because the style is loaded at startup.
+    // ─── Step 3: Force Material Dark theme ──────────────────────────────────
     qputenv("QT_QUICK_CONTROLS_STYLE",              "Material");
     qputenv("QT_QUICK_CONTROLS_MATERIAL_THEME",     "Dark");
     qputenv("QT_QUICK_CONTROLS_MATERIAL_BACKGROUND", "#0a0a0c");
     qputenv("QT_QUICK_CONTROLS_MATERIAL_ACCENT",     "Purple");
 
-    // ─── Step 4: Create the Qt application object ───────────────────────────
-    // QApplication (not QCoreApplication) is needed for Qt Quick / GUI apps.
+    // ─── Step 4: App metadata (used by QSettings) ────────────────────────────
+    QCoreApplication::setOrganizationName("LordTael");
+    QCoreApplication::setOrganizationDomain("lordtael.com");
+    QCoreApplication::setApplicationName("MLP Player");
+
     QApplication app(argc, argv);
 
-    // ─── Step 5: Register the Equalizer type with QML ───────────────────────
-    // AudioEngine exposes an 'equalizer' property of type Equalizer*.
-    // QML needs to know this type exists even though it can never CREATE one.
-    // qmlRegisterUncreatableType tells QML: "this type exists, you can hold a
-    // pointer to it and call its Q_INVOKABLE methods, but you cannot write
-    // 'Equalizer { }' in QML".
+    // ─── Step 5: Parse command-line arguments ────────────────────────────────
+    QStringList args = QCoreApplication::arguments();
+    QStringList filepath = args.mid(1);
+
+    // ─── Step 6: Determine launch mode ──────────────────────────────────────
+    QString launchMode;
+    if (filepath.isEmpty())        launchMode = "Library";
+    else if (filepath.size() == 1) launchMode = "Minimal";
+    else                           launchMode = "Queue";
+
+    // ─── Step 7: Single-Instance IPC (Conditional) ──────────────────────────
+    // Only Minimal/Queue modes are single-instanced.
+    // Library mode always opens a new window.
+    bool isIpcServerRunning = false;
+    QLocalSocket socket;
+    socket.connectToServer("MLP_MusicPlayerIPC");
+    if (socket.waitForConnected(500)) {
+        isIpcServerRunning = true;
+        if (launchMode != "Library") {
+            // Secondary Minimal/Queue instance — send files and exit
+            if (!filepath.isEmpty()) {
+                socket.write(filepath.join('\n').toUtf8());
+                socket.waitForBytesWritten(1000);
+            }
+            return 0;   // Exit: the primary instance will handle these files
+        }
+        socket.disconnectFromServer();
+    }
+
+    // ─── Step 8: Register Equalizer with QML type system ────────────────────
     qmlRegisterUncreatableType<Equalizer>(
         "com.musicplayer", 1, 0,
         "Equalizer",
         "Equalizer cannot be created in QML"
     );
 
-    // ─── Step 6: Create backend instances (on the stack — no new/delete) ────
-    AudioEngine   audioEngine;
-    LibraryScanner libraryScanner;
-    TrackModel    trackModel;
+    // ─── Step 9: Create backend instances on the stack ──────────────────────
+    AudioEngine       audioEngine;
+    LibraryScanner    libraryScanner;
+    TrackModel        trackModel;
+    GamepadController gamepad;
+    PlaylistManager   playlistManager;
+    MprisManager      mprisManager;
 
-    // ─── Step 7: Connect the scanner to the model ───────────────────────────
-    // When scanning finishes and emits tracksAdded(vector),
-    // trackModel automatically calls setTracks(vector) and updates QML.
+    // ─── Step 10: Wire scanner → model connections ──────────────────────────
     QObject::connect(&libraryScanner, &LibraryScanner::tracksAdded,
                      &trackModel,     &TrackModel::setTracks);
+    QObject::connect(&libraryScanner, &LibraryScanner::tracksAppended,
+                     &trackModel,     &TrackModel::addTracks);
 
-    // ─── Step 8: Create the QML engine ──────────────────────────────────────
+    // ─── Step 11: Wire play-time tracking ───────────────────────────────────
+    // AudioEngine accumulates listening time and broadcasts it.
+    // Both LibraryScanner (DB persistence) and TrackModel (in-memory)
+    // receive the signal to stay in sync.
+    QObject::connect(&audioEngine, &AudioEngine::playTimeAccumulated,
+                     &libraryScanner, &LibraryScanner::updatePlayTime);
+    QObject::connect(&audioEngine, &AudioEngine::playTimeAccumulated,
+                     &trackModel, &TrackModel::updateTrackPlayTime);
+
+    // ─── Step 12: Wire MPRIS ↔ AudioEngine ──────────────────────────────────
+    // Desktop media controls (KDE Plasma, GNOME) send commands via D-Bus.
+    // MprisManager translates them into AudioEngine actions.
+    QObject::connect(&mprisManager, &MprisManager::playRequested,
+                     &audioEngine, &AudioEngine::play);
+    QObject::connect(&mprisManager, &MprisManager::pauseRequested,
+                     &audioEngine, &AudioEngine::pause);
+    QObject::connect(&mprisManager, &MprisManager::playPauseRequested,
+                     &audioEngine, [&audioEngine]() {
+        if (audioEngine.isPlaying()) audioEngine.pause();
+        else audioEngine.play();
+    });
+    QObject::connect(&mprisManager, &MprisManager::stopRequested,
+                     &audioEngine, &AudioEngine::stop);
+    QObject::connect(&mprisManager, &MprisManager::seekRequested,
+                     &audioEngine, [&audioEngine](int pos) {
+        audioEngine.setPosition(pos);
+    });
+
+    // ─── Step 13: Load initial data based on launch mode ────────────────────
+    if (launchMode == "Library") {
+        libraryScanner.loadDatabase();
+    } else {
+        libraryScanner.loadSpecificFiles(filepath);
+    }
+
+    // ─── Step 14: Bind IPC server (only if no existing server) ──────────────
+    if (!isIpcServerRunning) {
+        QLocalServer::removeServer("MLP_MusicPlayerIPC");
+        QLocalServer *server = new QLocalServer(&app);
+        server->listen("MLP_MusicPlayerIPC");
+        QObject::connect(
+            server, &QLocalServer::newConnection, [&libraryScanner, server]() {
+                QLocalSocket *clientSocket = server->nextPendingConnection();
+                QObject::connect(clientSocket, &QLocalSocket::readyRead,
+                    [&libraryScanner, clientSocket]() {
+                        QByteArray data = clientSocket->readAll();
+                        QStringList newFiles = QString::fromUtf8(data)
+                            .split('\n', Qt::SkipEmptyParts);
+                        if (!newFiles.isEmpty())
+                            libraryScanner.appendSpecificFiles(newFiles);
+                    });
+                QObject::connect(clientSocket, &QLocalSocket::disconnected,
+                                 clientSocket, &QLocalSocket::deleteLater);
+            });
+    }
+
+    // ─── Step 15: Create QML engine ─────────────────────────────────────────
     QQmlApplicationEngine engine;
-
-    // Register the image provider for album art
-    // After this, QML Image sources like "image://musiccover/path/to/song.mp3"
-    // will automatically call CoverArtProvider::requestImage()
     engine.addImageProvider(QLatin1String("musiccover"), new CoverArtProvider);
 
-    // ─── Step 9: Expose backend objects to QML ──────────────────────────────
-    // These names become global JavaScript identifiers in ALL QML files.
-    // QML can call methods: audioEngine.play()
-    // QML can read properties: audioEngine.isPlaying
-    // QML can connect to signals: Connections { target: audioEngine ... }
-    engine.rootContext()->setContextProperty("audioEngine",    &audioEngine);
-    engine.rootContext()->setContextProperty("libraryScanner", &libraryScanner);
-    engine.rootContext()->setContextProperty("trackModel",     &trackModel);
+    // ─── Step 16: Expose backend objects + launchMode to QML ────────────────
+    engine.rootContext()->setContextProperty("launchMode",      launchMode);
+    engine.rootContext()->setContextProperty("audioEngine",     &audioEngine);
+    engine.rootContext()->setContextProperty("libraryScanner",  &libraryScanner);
+    engine.rootContext()->setContextProperty("trackModel",      &trackModel);
+    engine.rootContext()->setContextProperty("gamepad",         &gamepad);
+    engine.rootContext()->setContextProperty("playlistManager", &playlistManager);
+    engine.rootContext()->setContextProperty("mprisManager",    &mprisManager);
 
-    // ─── Step 10: Load the root QML file ────────────────────────────────────
+    // ─── Step 17: Load root QML and start event loop ─────────────────────────
     const QUrl url(QStringLiteral("qrc:/qml/main.qml"));
-
-    // Connect objectCreated to detect if loading failed (e.g., QML parse error)
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreated, &app,
         [url](QObject *obj, const QUrl &objUrl) {
             if (!obj && url == objUrl)
-                QCoreApplication::exit(-1);   // QML failed to load — exit
+                QCoreApplication::exit(-1);
         },
-        Qt::QueuedConnection
-    );
-    engine.load(url);   // Starts QML parsing and instantiation
+        Qt::QueuedConnection);
+    engine.load(url);
 
-    // ─── Step 11: Run the event loop ────────────────────────────────────────
-    // app.exec() blocks here until the user closes the window.
-    // All signals, slots, timers, and the 250ms progress timer run within this loop.
     return app.exec();
 }
 ```
 
 ---
 
-## 9.2 Why Stack Allocation?
+## 12.2 Why Stack Allocation?
 
 ```cpp
-AudioEngine   audioEngine;     // Stack
-LibraryScanner libraryScanner; // Stack
-TrackModel    trackModel;      // Stack
+AudioEngine       audioEngine;
+LibraryScanner    libraryScanner;
+TrackModel        trackModel;
+GamepadController gamepad;
+PlaylistManager   playlistManager;
+MprisManager      mprisManager;
 ```
 
-All three backend objects are created on the stack (no `new`). This means:
+All six backend objects are created on the stack (no `new`). This means:
 - When `main()` returns, they are automatically destroyed in reverse order
-- miniaudio and SQLite are properly cleaned up in destructors
+- miniaudio, SQLite, SDL2, and D-Bus are properly cleaned up in destructors
 - No risk of memory leaks
 
 If they were heap-allocated (`new AudioEngine()`), we'd need `delete` or a smart pointer.
 
 ---
 
-## 9.3 The Signal Connection in main.cpp
+## 12.3 The Signal Connections in main.cpp
 
+There are now **six** groups of inter-object connections:
+
+### Scanner → Model (Data flow)
 ```cpp
 QObject::connect(&libraryScanner, &LibraryScanner::tracksAdded,
                  &trackModel,     &TrackModel::setTracks);
+QObject::connect(&libraryScanner, &LibraryScanner::tracksAppended,
+                 &trackModel,     &TrackModel::addTracks);
 ```
 
-This is the **only** inter-object connection made in `main.cpp`. Both objects are completely ignorant of each other — `LibraryScanner` doesn't `#include "track_model.h"` and vice versa. The coupling is established here, at the composition root.
+- `tracksAdded → setTracks`: clears the model and repopulates (startup and full scans)
+- `tracksAppended → addTracks`: inserts rows at the end (IPC new files)
 
-This is the **dependency injection** / **Hollywood principle**: "Don't call us. We'll call you." The scanner just emits — it doesn't care who listens.
+### AudioEngine → Scanner + Model (Play-time tracking)
+```cpp
+QObject::connect(&audioEngine, &AudioEngine::playTimeAccumulated,
+                 &libraryScanner, &LibraryScanner::updatePlayTime);
+QObject::connect(&audioEngine, &AudioEngine::playTimeAccumulated,
+                 &trackModel, &TrackModel::updateTrackPlayTime);
+```
+
+The `playTimeAccumulated(filePath, seconds)` signal fans out to both:
+- `LibraryScanner::updatePlayTime` — persists to SQLite
+- `TrackModel::updateTrackPlayTime` — updates in-memory model for live "Most Played" filter
+
+### MPRIS → AudioEngine (Desktop control)
+```cpp
+QObject::connect(&mprisManager, &MprisManager::playRequested, ...);
+QObject::connect(&mprisManager, &MprisManager::pauseRequested, ...);
+QObject::connect(&mprisManager, &MprisManager::playPauseRequested, ...);
+QObject::connect(&mprisManager, &MprisManager::stopRequested, ...);
+QObject::connect(&mprisManager, &MprisManager::seekRequested, ...);
+```
+
+When the user presses media keys or uses the KDE Plasma media widget, D-Bus commands arrive at `MprisManager`, which emits these signals. The connections above route them directly to `AudioEngine`.
+
+All objects remain completely ignorant of each other — the coupling lives only here, at the composition root. This is the **Hollywood principle**: "Don't call us. We'll call you."
 
 ---
 
-## 9.4 Context Properties vs. qmlRegisterType
+## 12.4 Context Properties — The Complete List
 
-There are two ways to expose C++ to QML:
-
-| Method | What It Does | Example |
-|--------|-------------|---------|
-| `setContextProperty` | Exposes a **single instance** as a global name | `audioEngine.play()` |
-| `qmlRegisterType` | Lets QML **create new instances** of a type | `MyType { }` in QML |
-| `qmlRegisterUncreatableType` | Lets QML **hold a pointer** to a type but not create one | Used for `Equalizer*` |
-
-We use `setContextProperty` for all three backend objects because there should be exactly **one** audio engine and **one** track model. QML doesn't need to create its own — it uses the single shared instance.
+| Context Property | C++ Type | QML Usage |
+|---|---|---|
+| `launchMode` | `QString` | Controls window size and which UI is shown |
+| `audioEngine` | `AudioEngine*` | `audioEngine.play()`, `.pause()`, `.volume`, etc. |
+| `libraryScanner` | `LibraryScanner*` | `libraryScanner.scanDirectory(path)` |
+| `trackModel` | `TrackModel*` | Bound to `ListView.model` and grid views |
+| `gamepad` | `GamepadController*` | Gamepad button/axis events for QML navigation |
+| `playlistManager` | `PlaylistManager*` | `playlistManager.createPlaylist(name)`, etc. |
+| `mprisManager` | `MprisManager*` | `mprisManager.setMetadata(...)`, `.setPlaybackStatus(...)` |
 
 ---
 
-## 9.5 qputenv — Theme Configuration
+## 12.5 Conditional IPC: Library Mode Multi-Instance
+
+The IPC logic has been refined so that **Library mode always opens a new window**, while Minimal/Queue modes redirect to the existing instance:
+
+```cpp
+if (socket.waitForConnected(500)) {
+    isIpcServerRunning = true;
+    if (launchMode != "Library") {
+        // Minimal/Queue: send files to primary, exit
+        socket.write(filepath.join('\n').toUtf8());
+        return 0;
+    }
+    socket.disconnectFromServer();
+    // Library mode: fall through → create a new window
+}
+```
+
+The IPC server is only bound if no server is already running (`!isIpcServerRunning`), preventing socket conflicts between multiple Library windows.
+
+---
+
+## 12.6 qputenv — Theme Configuration
 
 ```cpp
 qputenv("QT_QUICK_CONTROLS_STYLE",              "Material");
@@ -2076,13 +3228,19 @@ qputenv("QT_QUICK_CONTROLS_MATERIAL_ACCENT",     "Purple");
 These **must** be set before `QApplication` is constructed. The Qt Quick Controls style system reads them during initialization. Setting them afterward has no effect.
 
 Without these, if the user's OS is set to a Light theme, Qt would override the app's dark appearance. The `Dark` override ensures consistent appearance regardless of system theme.
-# Chapter 10 — QML Language Fundamentals for C++ Developers
+
+
+<div class="page-break"></div>
+
+<a id="13_qml_fundamentals.md"></a>
+
+# Chapter 13 — QML Language Fundamentals for C++ Developers
 
 QML (Qt Modeling Language) is a **declarative language** for building UIs. Instead of writing imperative code that says "create a button, then set its color, then position it", you declare what the UI should look like as a **tree of nested objects**.
 
 ---
 
-## 10.1 Your First QML File
+## 13.1 Your First QML File
 
 ```qml
 import QtQuick 2.15        // Core QML types (Rectangle, Text, MouseArea, etc.)
@@ -2112,7 +3270,7 @@ Key observations:
 
 ---
 
-## 10.2 Types You'll See in This Project
+## 13.2 Types You'll See in This Project
 
 | QML Type | Purpose |
 |----------|---------|
@@ -2135,7 +3293,7 @@ Key observations:
 
 ---
 
-## 10.3 Properties: Built-in and Custom
+## 13.3 Properties: Built-in and Custom
 
 Every QML item has built-in properties (`width`, `height`, `color`, `visible`, etc.). You can define your own:
 
@@ -2161,7 +3319,7 @@ Rectangle {
 
 ---
 
-## 10.4 id — Addressing Items by Name
+## 13.4 id — Addressing Items by Name
 
 Every item can have a unique `id` that lets other items reference it:
 
@@ -2185,7 +3343,7 @@ ApplicationWindow {
 
 ---
 
-## 10.5 Signals and Handlers in QML
+## 13.5 Signals and Handlers in QML
 
 C++ signals become `on<SignalName>` handlers in QML:
 
@@ -2221,7 +3379,7 @@ Connections {
 
 ---
 
-## 10.6 Functions in QML
+## 13.6 Functions in QML
 
 JavaScript functions live inside QML items:
 
@@ -2243,7 +3401,7 @@ Rectangle {
 
 ---
 
-## 10.7 ListView and Delegates
+## 13.7 ListView and Delegates
 
 `ListView` displays a scrollable list from a model. The `delegate` defines what each row looks like:
 
@@ -2285,7 +3443,7 @@ Inside a delegate:
 
 ---
 
-## 10.8 Anchors — The Layout System
+## 13.8 Anchors — The Layout System
 
 `anchors` is how you position items relative to their parent or siblings:
 
@@ -2318,7 +3476,7 @@ You can anchor to `parent.top`, `parent.bottom`, `parent.left`, `parent.right`, 
 
 ---
 
-## 10.9 Layouts vs Anchors
+## 13.9 Layouts vs Anchors
 
 For multiple children that need to be arranged together, use `RowLayout` / `ColumnLayout`:
 
@@ -2339,7 +3497,7 @@ RowLayout {
 
 ---
 
-## 10.10 Animations and Behaviors
+## 13.10 Animations and Behaviors
 
 QML makes animation very easy:
 
@@ -2365,7 +3523,7 @@ Rectangle {
 
 ---
 
-## 10.11 Importing Other QML Files
+## 13.11 Importing Other QML Files
 
 When `main.qml` uses `LibraryView { ... }`, it imports `LibraryView.qml` from the same directory. No explicit `import` statement is needed — **all `.qml` files in the same directory are automatically available by their filename** (minus `.qml`).
 
@@ -2379,62 +3537,73 @@ NowPlayingView {
     anchors.fill: parent
 }
 ```
-# Chapter 11 — main.qml: The Root Window
 
-`main.qml` is the root of the entire UI. It is 787 lines and contains:
+
+<div class="page-break"></div>
+
+<a id="14_qml_main_window.md"></a>
+
+# Chapter 14 — main.qml: The Root Window
+
+`main.qml` is the root of the entire UI. It is over 1300 lines and contains:
 - The `ApplicationWindow` (the OS window)
-- A custom title bar (because the window is frameless)
-- Global playback state (current track, queue, queue index)
-- The playback bar (bottom controls)
-- All popups: equalizer, volume, now-playing, shortcuts, scanning progress
+- A custom frameless title bar (Library mode only)
+- Global playback state (current track, queue, queue index, repeat mode)
+- Session persistence (queue and position survive restarts via `Qt.labs.settings`)
+- The playback bar (bottom controls, Library mode only)
+- All popups: equalizer, volume, now-playing, shortcuts, about, scanning progress
 - The queue drawer
-- Keyboard shortcuts
+- Keyboard shortcuts (12 application-wide shortcuts)
 
 ---
 
-## 11.1 ApplicationWindow and Frameless Mode
+## 14.1 ApplicationWindow and Frameless Mode
 
 ```qml
 ApplicationWindow {
     id: window
-    width: 1260
-    height: 768
+    // Window size adapts to launch mode
+    width:  launchMode === "Library" ? 1260 : 700
+    height: launchMode === "Library" ?  768 : 350
     visible: true
+    visibility: launchMode === "Library" ? Window.Maximized : Window.Windowed
     title: qsTr("Modern Music Player")
 
-    // FramelessWindowHint removes the OS title bar and window chrome
+    // Frameless: no OS title bar — we draw our own
     flags: Qt.Window | Qt.FramelessWindowHint
 
-    // Material Dark theme
     Material.theme: Material.Dark
     Material.accent: Material.Purple
-    color: "#0a0a0c"   // Deep near-black background
+    color: "#0a0a0c"
 ```
 
-`Qt.FramelessWindowHint` removes the OS-provided title bar, giving us full control over how the window looks. The tradeoff is we must implement our own:
-- Title bar with window buttons
-- Drag-to-move
-- Minimize/Maximize/Close buttons
+In **Library mode**, the window starts maximised at 1260×768. In **Minimal** or **Queue** mode it opens as a 700×350 compact window. The title bar is only rendered in Library mode (`visible: launchMode === "Library"`).
 
 ---
 
-## 11.2 Global State Properties
+## 14.2 Global State Properties
 
 ```qml
-// These are visible to ALL child QML files (LibraryView, NowPlayingView etc.)
-property string currentPlayingTitle:  "No Song Playing"
-property string currentPlayingArtist: ""
-property string currentPlayingPath:   ""
-property var    playbackQueue:        []    // Array of track objects
-property int    currentQueueIndex:    -1   // -1 means nothing playing
-property bool   repeatMode:           false
+// These are visible to ALL child QML files (LibraryView, NowPlayingView, MinimalView etc.)
+property string currentPlayingTitle:       "No Song Playing"
+property string currentPlayingArtist:      ""
+property string currentPlayingPath:        ""
+property bool   currentPlayingHasCoverArt: false
+property var    playbackQueue:             []   // Array of track JS objects
+property int    currentQueueIndex:         -1   // -1 means nothing playing
+property int    repeatMode:                0    // 0=Off, 1=Repeat Track, 2=Repeat All
+property bool   isFullScreen:              false
+property string applicationVersion:        "1.2alpha"
 ```
 
-Because these are declared on `window` (the root `ApplicationWindow` with `id: window`), any child QML file can read from or write to `window.currentPlayingTitle` etc.
+Note that `repeatMode` is an **integer with three states**, not a boolean:
+- `0` — Off: advance to next track only when queue is not at the end
+- `1` — Repeat Track: seek to 0 and replay the same song
+- `2` — Repeat All: advance normally, but loop back to index 0 at the end
 
 ---
 
-## 11.3 playTrackAtIndex — The Core Playback Function
+## 14.3 playTrackAtIndex — The Core Playback Function
 
 ```qml
 function playTrackAtIndex(idx, contextCategory) {
@@ -2476,20 +3645,26 @@ function playTrackAtIndex(idx, contextCategory) {
 
 ---
 
-## 11.4 Auto-Advance on Track End
+## 14.4 Auto-Advance on Track End
 
 ```qml
 Connections {
     target: audioEngine
     function onPlaybackFinished() {
-        if (repeatMode) {
+        if (repeatMode === 1) {          // Repeat Track
             audioEngine.setPosition(0);
             audioEngine.play();
-        } else {
-            // Auto-advance to next track unless we're at the end
-            if (currentQueueIndex >= 0 && currentQueueIndex < playbackQueue.length - 1) {
+        } else if (repeatMode === 2) {   // Repeat All
+            if (currentQueueIndex < playbackQueue.length - 1) {
+                playTrackAtIndex(currentQueueIndex + 1);
+            } else {
+                playTrackAtIndex(0);     // Loop back to first track
+            }
+        } else {                         // Repeat Off
+            if (currentQueueIndex < playbackQueue.length - 1) {
                 playTrackAtIndex(currentQueueIndex + 1);
             }
+            // else: stay at end, do nothing
         }
     }
 }
@@ -2499,7 +3674,7 @@ This runs every time miniaudio signals that a track has ended (the 250ms timer i
 
 ---
 
-## 11.5 The Custom Title Bar
+## 14.5 The Custom Title Bar
 
 ```qml
 Rectangle {
@@ -2551,91 +3726,117 @@ Rectangle {
 
 ---
 
-## 11.6 The Keyboard Shortcut System
+## 14.6 The Keyboard Shortcut System
 
 ```qml
-Shortcut { sequence: "Space";       onActivated: audioEngine.isPlaying ? audioEngine.pause() : audioEngine.play() }
-Shortcut { sequence: "Ctrl+Left";   onActivated: playTrackAtIndex(currentQueueIndex - 1) }
-Shortcut { sequence: "Ctrl+Right";  onActivated: playTrackAtIndex(currentQueueIndex + 1) }
-Shortcut { sequence: "Left";        onActivated: audioEngine.setPosition(audioEngine.position - 10.0) }
-Shortcut { sequence: "Right";       onActivated: audioEngine.setPosition(audioEngine.position + 10.0) }
-Shortcut { sequence: "Up";          onActivated: audioEngine.volume = Math.min(1.0, audioEngine.volume + 0.1) }
-Shortcut { sequence: "Down";        onActivated: audioEngine.volume = Math.max(0.0, audioEngine.volume - 0.1) }
-Shortcut { sequence: "Ctrl+M";      onActivated: { /* Toggle mute */ } }
-Shortcut { sequence: "Ctrl+P";      onActivated: queueDrawer.visible = !queueDrawer.visible }
-Shortcut { sequence: "F";           onActivated: libraryView.isSidebarVisible = !libraryView.isSidebarVisible }
-Shortcut { sequence: "Ctrl+Q";      onActivated: Qt.quit() }
+// All shortcuts use Qt.ApplicationShortcut — they fire even when
+// focus is inside a text field or button.
+Shortcut { sequence: "Space";       context: Qt.ApplicationShortcut
+           onActivated: audioEngine.isPlaying ? audioEngine.pause() : audioEngine.play() }
+
+Shortcut { sequence: "Ctrl+Left";   context: Qt.ApplicationShortcut
+           onActivated: {
+               if (audioEngine.position > 2.0) audioEngine.setPosition(0.0);
+               else if (currentQueueIndex > 0) playTrackAtIndex(currentQueueIndex - 1);
+           }}
+
+Shortcut { sequence: "Ctrl+Right";  context: Qt.ApplicationShortcut
+           onActivated: playTrackAtIndex(currentQueueIndex + 1) }
+
+Shortcut { sequence: "Left";        context: Qt.ApplicationShortcut
+           onActivated: audioEngine.setPosition(audioEngine.position - 10.0) }
+
+Shortcut { sequence: "Right";       context: Qt.ApplicationShortcut
+           onActivated: audioEngine.setPosition(audioEngine.position + 10.0) }
+
+Shortcut { sequence: "Up";          context: Qt.ApplicationShortcut
+           onActivated: audioEngine.volume = Math.min(1.0, audioEngine.volume + 0.1) }
+
+Shortcut { sequence: "Down";        context: Qt.ApplicationShortcut
+           onActivated: audioEngine.volume = Math.max(0.0, audioEngine.volume - 0.1) }
+
+Shortcut { sequence: "Ctrl+M";      context: Qt.ApplicationShortcut
+           onActivated: {
+               // Smart mute: remembers previous volume
+               if (audioEngine.volume > 0.01) {
+                   previousVolume = audioEngine.volume;
+                   audioEngine.volume = 0.0;
+               } else {
+                   audioEngine.volume = previousVolume > 0.01 ? previousVolume : 1.0;
+               }
+           }}
+
+Shortcut { sequence: "Ctrl+P";      context: Qt.ApplicationShortcut
+           onActivated: queueDrawer.visible = !queueDrawer.visible }
+
+Shortcut { sequence: "F";           context: Qt.ApplicationShortcut
+           onActivated: libraryViewMain.isSidebarVisible = !libraryViewMain.isSidebarVisible }
+
+Shortcut { sequence: "Ctrl+Shift+F"; context: Qt.ApplicationShortcut
+           onActivated: toggleFullScreen() }
+
+Shortcut { sequence: "Backspace";   context: Qt.ApplicationShortcut
+           onActivated: libraryViewMain.goBack() }
+
+Shortcut { sequence: StandardKey.Back; context: Qt.ApplicationShortcut
+           onActivated: libraryViewMain.goBack() }
+
+Shortcut { sequence: "Ctrl+Q";      context: Qt.ApplicationShortcut
+           onActivated: Qt.quit() }
 ```
 
-`Qt.ApplicationShortcut` context means the shortcut works even when focus is inside a text input. Without it, pressing Space while a button is focused would activate both the button AND the shortcut.
+| Key | Action |
+|---|---|
+| `Space` | Play / Pause |
+| `Ctrl+Left` | Previous track (or restart if >2s played) |
+| `Ctrl+Right` | Next track |
+| `Left` / `Right` | Seek ±10 seconds |
+| `Up` / `Down` | Volume ±10% |
+| `Ctrl+M` | Mute / Unmute (preserves volume) |
+| `Ctrl+P` | Toggle Queue Drawer |
+| `F` | Toggle Library Sidebar |
+| `Ctrl+Shift+F` | Toggle Fullscreen |
+| `Backspace` | Navigate back in Library |
+| `Ctrl+Q` | Quit |
 
 ---
 
-## 11.7 The Bottom Playback Bar
+## 14.7 The Bottom Playback Bar
 
-This is the persistent control bar at the bottom (80px tall, always visible):
+The bottom playback bar is **only visible in Library mode** (hidden in Minimal/Queue modes where `MinimalView` handles its own controls). It uses a three-section layout inside a `Rectangle` (90px tall):
 
+```html
+<div style="display: flex; border: 2px solid #ccc; border-radius: 8px; font-family: monospace; text-align: center; background: #fafafa; margin: 20px 0;">
+  <div style="flex: 1; border-right: 1px solid #ccc; padding: 15px;">
+    <strong>LEFT</strong><br/>[Art] [Title / Artist]
+  </div>
+  <div style="flex: 2; border-right: 1px solid #ccc; padding: 15px;">
+    <strong>CENTER</strong><br/>[Prev] [Play] [Next] [Repeat] <span style="margin-left:20px;">00:00 ─────── 03:37</span>
+  </div>
+  <div style="flex: 1; padding: 15px;">
+    <strong>RIGHT</strong><br/>[Vol] [EQ] [Queue]
+  </div>
+</div>
+```
+
+- **Left section**: 80×80 cover art thumbnail (tapping toggles `nowPlayingPopup`) + title + artist
+- **Center section**: Prev / Play+Pause / Next / Repeat buttons + seek `Slider` with timestamps
+- **Right section**: Volume button + EQ button + Queue button
+
+The play button has a special guard:
 ```qml
-Rectangle {
-    id: playbackBar
-    width: parent.width; height: 80
-    anchors.bottom: parent.bottom
-    color: "#18181c"
-
-    function formatTime(seconds) {
-        if (!seconds || isNaN(seconds)) return "00:00";
-        let m = Math.floor(seconds / 60);
-        let s = Math.floor(seconds % 60);
-        return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
-    }
-
-    RowLayout {
-        // Expand/Collapse Now Playing overlay button
-        ToolButton { icon.source: nowPlayingPopup.opened ? "expand_down.svg" : "expand_up.svg"
-                     onClicked: nowPlayingPopup.opened ? nowPlayingPopup.close() : nowPlayingPopup.open() }
-
-        // Previous / Play-Pause / Next
-        RoundButton { icon.source: "prev.svg";  onClicked: playTrackAtIndex(currentQueueIndex - 1) }
-        RoundButton {
-            icon.source: audioEngine.isPlaying ? "pause.svg" : "play.svg"
-            onClicked: {
-                if (currentQueueIndex === -1 && playbackQueue.length > 0)
-                    playTrackAtIndex(0)   // Auto-start first track
-                else
-                    audioEngine.isPlaying ? audioEngine.pause() : audioEngine.play()
-            }
-        }
-        RoundButton { icon.source: "next.svg";  onClicked: playTrackAtIndex(currentQueueIndex + 1) }
-
-        // Current time
-        Text { text: playbackBar.formatTime(audioEngine.position); color: "white" }
-
-        // Seek slider (binds bidirectionally to audioEngine.position)
-        Slider {
-            Layout.fillWidth: true
-            from: 0; to: audioEngine.duration
-            value: audioEngine.position
-            onMoved: audioEngine.position = value   // WRITE triggers setPosition()
-        }
-
-        // Total duration
-        Text { text: playbackBar.formatTime(audioEngine.duration); color: "white" }
-
-        // Volume
-        ToolButton { onClicked: window.showVolumePopup(this) }
-
-        // Equalizer
-        ToolButton { onClicked: eqPopup.open() }
-
-        // Queue
-        ToolButton { onClicked: queueDrawer.open() }
-    }
+onClicked: {
+    // If nothing is queued to play yet, auto-start from index 0
+    if (currentQueueIndex === -1 && playbackQueue.length > 0)
+        playTrackAtIndex(0)
+    else
+        audioEngine.isPlaying ? audioEngine.pause() : audioEngine.play()
 }
 ```
 
 ---
 
-## 11.8 The Queue Drawer
+## 14.8 The Queue Drawer
 
 ```qml
 Drawer {
@@ -2673,9 +3874,58 @@ Drawer {
     }
 }
 ```
-# Chapter 12 — LibraryView.qml: The Main Library Browser
 
-## 12.1 Overview
+---
+
+## 14.9 Session Persistence
+
+`main.qml` uses `Qt.labs.settings` (`QSettings` under the hood) to remember the user's listening state across restarts:
+
+```qml
+Settings {
+    id: sessionSettings
+    category: "MediaPlayer"
+    property string savedQueue:        "[]"   // JSON array of file paths
+    property int    savedQueueIndex:   -1
+    property real   savedPosition:     0.0
+    property int    savedRepeatMode:   0
+    property real   savedVolume:       1.0
+}
+```
+
+**Saving** happens in `Component.onDestruction` (called when the window is closed):
+```qml
+Component.onDestruction: {
+    let paths = [];
+    for (let i = 0; i < playbackQueue.length; i++) {
+        paths.push(playbackQueue[i].filePath);
+    }
+    sessionSettings.savedQueue = JSON.stringify(paths);
+    sessionSettings.savedQueueIndex = currentQueueIndex;
+    sessionSettings.savedPosition   = audioEngine.position;
+    sessionSettings.savedVolume     = audioEngine.volume;
+    sessionSettings.savedRepeatMode = repeatMode;
+}
+```
+
+**Restoring** requires a two-timer pattern because the model is populated asynchronously:
+
+1. `startupRestoreTimer` (200ms, repeating) — polls `trackModel.rowCount()`. Once > 0, the library data is available, so it rebuilds the queue from saved file paths and seeks to `savedQueueIndex`.
+2. `restorePosTimer` (200ms, one-shot) — started after `audioEngine.loadFile()`. Waits for miniaudio to finish its async file-open before calling `audioEngine.setPosition(savedPosition)`.
+
+This two-stage approach is necessary because:
+- The model is populated via a deferred QTimer signal from C++
+- miniaudio decodes files asynchronously; seeking before decoding is ready is silently ignored
+```
+
+
+<div class="page-break"></div>
+
+<a id="15_qml_library_view.md"></a>
+
+# Chapter 15 — LibraryView.qml: The Main Library Browser
+
+## 15.1 Overview
 
 `LibraryView.qml` is the heart of the application's UI. It shows the user's music library in a tiled grid layout with a collapsible left sidebar for category filtering. It has 5 view modes:
 
@@ -2689,7 +3939,7 @@ Drawer {
 
 ---
 
-## 12.2 The Component Layout
+## 15.2 The Component Layout
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -2713,7 +3963,7 @@ Drawer {
 
 ---
 
-## 12.3 State Properties
+## 15.3 State Properties
 
 ```qml
 Item {
@@ -2727,7 +3977,7 @@ These three properties drive the entire view. When `categoryContext` changes, th
 
 ---
 
-## 12.4 The Collapsible Sidebar
+## 15.4 The Collapsible Sidebar
 
 ```qml
 Rectangle {
@@ -2785,7 +4035,7 @@ Rectangle {
 
 ---
 
-## 12.5 StackView — Navigation
+## 15.5 StackView — Navigation
 
 `StackView` provides the drill-down navigation. Think of it as a stack of pages: push to go deeper, pop to go back.
 
@@ -2820,7 +4070,7 @@ ToolButton {
 
 ---
 
-## 12.6 The Track Grid (trackGridComponent)
+## 15.6 The Track Grid (trackGridComponent)
 
 ```qml
 Component {
@@ -2880,7 +4130,7 @@ Component {
 
 ---
 
-## 12.7 The Artist Grid — Circular Tiles
+## 15.7 The Artist Grid — Circular Tiles
 
 Artists use circular images (a design convention for artist portraits):
 
@@ -2907,7 +4157,7 @@ onClicked: {
 
 ---
 
-## 12.8 `model` vs `modelData` Explained
+## 15.8 `model` vs `modelData` Explained
 
 Inside a delegate that uses a **C++ QAbstractListModel**, you access roles by name directly:
 ```qml
@@ -2929,7 +4179,7 @@ This distinction is a common source of confusion in QML.
 
 ---
 
-## 12.9 Navigation Flow Summary
+## 15.9 Navigation Flow Summary
 
 ```
 User selects "Artists" in sidebar
@@ -2951,9 +4201,15 @@ User clicks Back button
     → mainStack.pop()
     → Goes back to artistGridComponent
 ```
-# Chapter 13 — EqualizerView.qml and NowPlayingView.qml
 
-## 13.1 EqualizerView.qml
+
+<div class="page-break"></div>
+
+<a id="16_qml_equalizer_view.md"></a>
+
+# Chapter 16 — EqualizerView.qml and NowPlayingView.qml
+
+## 16.1 EqualizerView.qml
 
 The Equalizer view is hosted in a `Popup` in `main.qml`. It provides:
 - 10 vertical sliders (one per EQ band)
@@ -3061,7 +4317,7 @@ User drags slider for 1kHz band
 
 ---
 
-## 13.2 NowPlayingView.qml
+## 16.2 NowPlayingView.qml
 
 This is a full-screen overlay (shown when you click the expand button in the playback bar). It provides a cinematic "Now Playing" experience:
 
@@ -3129,7 +4385,7 @@ Key concept: `NowPlayingView` reads from `window.currentPlayingTitle`, `window.c
 
 ---
 
-## 13.3 The `Connections` Pattern — Updating the EQ Sliders
+## 16.3 The `Connections` Pattern — Updating the EQ Sliders
 
 When the user selects a preset like "Rock", `Equalizer::loadPreset("Rock")` calls `setBandGain(i, value)` for all 10 bands. Each call emits `bandGainChanged`. The QML sliders need to reflect these changes.
 
@@ -3146,7 +4402,7 @@ BUT: When the user drags the slider, `value` changes and triggers `onMoved` → 
 
 ---
 
-## 13.4 Avoiding Binding Loops
+## 16.4 Avoiding Binding Loops
 
 A **binding loop** would be:
 ```qml
@@ -3159,251 +4415,1445 @@ width: parent.width   // width = parent.width
 Qt detects these at runtime and prints a warning. In the Equalizer, the pattern `value: eq.bandGain(index)` is safe because:
 1. `onMoved` only fires when the **user** drags (not on programmatic value changes)
 2. `setBandGain` only emits if the value actually changed (the `!=` check in C++)
-# Chapter 14 — Complete System Dataflow
+
+
+<div class="page-break"></div>
+
+<a id="17_qml_minimal_view.md"></a>
+
+# Chapter 17 — MinimalView: The Compact Now Playing Window
+
+`MinimalView.qml` is the UI displayed when the application is launched in **Minimal** or **Queue** mode (i.e., when audio files are opened directly from a file manager rather than from the app icon). It is a purpose-built, self-contained compact playback interface.
+
+---
+
+## 17.1 Why a Separate Component?
+
+The full Library UI (`LibraryView` + `main.qml` playback bar) is designed for a 1260px-wide maximised window. Trying to squeeze it into a 700×350 window would produce layout overflows and visual chaos.
+
+`MinimalView` was therefore built from scratch as a standalone `Item` optimised for the compact window size. It shares global state (queue, track info, audioEngine) but manages its own layout entirely.
+
+---
+
+## 17.2 Layout Overview
+
+```html
+<div style="width: 100%; max-width: 600px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; background-color: #f9f9f9; font-family: sans-serif; display: flex; flex-direction: column;">
+  <!-- Title Bar -->
+  <div style="background-color: #eee; padding: 5px 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd;">
+    <span style="font-size: 14px; color: #555;">[Draggable Area]</span>
+    <div>
+      <span style="margin-right: 10px; cursor: pointer;">[ – ]</span>
+      <span style="cursor: pointer;">[ × ]</span>
+    </div>
+  </div>
+  <!-- Main Content -->
+  <div style="display: flex; padding: 20px; align-items: center;">
+    <!-- Cover Art (Left) -->
+    <div style="width: 150px; height: 150px; background-color: #202025; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #555; font-size: 48px; margin-right: 20px; flex-shrink: 0;">
+      ♪
+    </div>
+    <!-- Details & Controls (Right) -->
+    <div style="flex-grow: 1; display: flex; flex-direction: column;">
+      <h2 style="margin: 0; font-size: 32px; color: #333;">Song Title</h2>
+      <h3 style="margin: 5px 0 10px 0; font-size: 18px; color: #666;">Artist Name</h3>
+      <span style="font-size: 15px; color: #999; margin-bottom: 15px;">Now Playing</span>
+      
+      <!-- Seek Bar -->
+      <div style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: #555; margin-bottom: 15px;">
+        <span>00:00</span>
+        <div style="flex-grow: 1; height: 4px; background-color: #ddd; margin: 0 10px; position: relative;">
+            <div style="width: 30%; height: 100%; background-color: #007bff;"></div>
+        </div>
+        <span>03:37</span>
+      </div>
+
+      <!-- Controls -->
+      <div style="display: flex; align-items: center; padding-left: 20px; font-size: 18px; color: #444;">
+        <span style="margin-right: 15px;">[⟲]</span>
+        <span style="margin-right: 15px;">[⏮]</span>
+        <span style="margin-right: 15px; border: 1px solid #ccc; padding: 5px 15px; border-radius: 5px;">[▶ / ⏸]</span>
+        <span style="margin-right: 30px;">[⏭]</span>
+        <span style="margin-right: 15px;">[🔊]</span>
+        <span>[≡]</span>
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+The window is split horizontally into two sections anchored to the root `Item`:
+- **Left**: a square cover art image (height constrained to `parent.height - 40`)
+- **Right**: a `ColumnLayout` with title, artist, "Now Playing" label, seek row, controls row
+
+---
+
+## 17.3 The Cover Art Area
+
+```qml
+Rectangle {
+    id: coverArtRect
+    width: parent.height - titleBarHeight - bottomPadding
+    height: width   // Always square
+    anchors.left: parent.left
+    anchors.leftMargin: 20
+    anchors.verticalCenter: parent.verticalCenter
+    radius: 10
+    color: "#202025"
+    clip: true
+
+    Image {
+        anchors.fill: parent
+        source: window.currentPlayingHasCoverArt
+            ? "image://musiccover/" + window.currentPlayingPath
+            : ""
+        fillMode: Image.PreserveAspectCrop
+        asynchronous: true
+        sourceSize: Qt.size(300, 300)
+    }
+
+    Text {
+        anchors.centerIn: parent
+        text: "♪"
+        color: "#555"
+        font.pixelSize: 48
+        visible: !window.currentPlayingHasCoverArt
+    }
+}
+```
+
+Using `sourceSize: Qt.size(300, 300)` ensures that heavy cover art images are downscaled before being decoded into RAM, which keeps memory usage low for the compact view.
+
+---
+
+## 17.4 Frameless Window Management
+
+Because the window uses `Qt.FramelessWindowHint`, `MinimalView` must provide its own drag, minimize, and close controls:
+
+```qml
+// Drag the entire window by dragging the empty area
+DragHandler {
+    target: null
+    onActiveChanged: if (active) window.startSystemMove()
+}
+
+// Title bar row (top-right corner)
+RowLayout {
+    anchors.top:   parent.top
+    anchors.right: parent.right
+    anchors.margins: 8
+
+    ToolButton {
+        icon.source: "qrc:/qml/icons/minimize.svg"
+        onClicked: window.showMinimized()
+    }
+    ToolButton {
+        icon.source: "qrc:/qml/icons/close.svg"
+        onClicked: window.close()
+    }
+}
+```
+
+There is no Maximize button in the Minimal view — the compact window is intentionally fixed in size.
+
+---
+
+## 17.5 Playback Controls
+
+The controls in `MinimalView` call the same `window.playTrackAtIndex()` function as the full Library UI:
+
+```qml
+RowLayout {
+    Layout.alignment: Qt.AlignHCenter
+    spacing: 12
+
+    // Repeat cycle button (Off → Track → All → Off)
+    ToolButton {
+        icon.source: window.repeatMode === 1
+            ? "qrc:/qml/icons/repeat_one.svg"
+            : "qrc:/qml/icons/repeat.svg"
+        onClicked: window.repeatMode = (window.repeatMode + 1) % 3
+    }
+
+    // Previous — smart: restarts if > 2 seconds elapsed, else goes back
+    ToolButton {
+        icon.source: "qrc:/qml/icons/prev.svg"
+        onClicked: {
+            if (audioEngine.position > 2.0) {
+                audioEngine.setPosition(0.0);
+            } else if (window.currentQueueIndex > 0) {
+                window.playTrackAtIndex(window.currentQueueIndex - 1);
+            }
+        }
+    }
+
+    // Play / Pause
+    ToolButton {
+        icon.source: audioEngine.isPlaying
+            ? "qrc:/qml/icons/pause.svg"
+            : "qrc:/qml/icons/play.svg"
+        onClicked: {
+            if (audioEngine.isPlaying) audioEngine.pause();
+            else audioEngine.play();
+        }
+    }
+
+    // Next
+    ToolButton {
+        icon.source: "qrc:/qml/icons/next.svg"
+        onClicked: {
+            if (window.currentQueueIndex < window.playbackQueue.length - 1) {
+                window.playTrackAtIndex(window.currentQueueIndex + 1);
+            }
+        }
+    }
+}
+```
+
+---
+
+## 17.6 Shared Popups
+
+`MinimalView` does not define its own volume popup or queue drawer. It reuses the ones defined in `main.qml` (which is the parent `ApplicationWindow`):
+
+```qml
+// Volume popup — defined in main.qml, opened from MinimalView
+ToolButton {
+    icon.source: audioEngine.volume <= 0.01
+        ? "qrc:/qml/icons/volume_off.svg"
+        : "qrc:/qml/icons/volume.svg"
+    onClicked: window.showVolumePopup(this)   // Calls main.qml function
+}
+
+// Queue drawer — also defined in main.qml
+ToolButton {
+    icon.source: "qrc:/qml/icons/queue.svg"
+    onClicked: queueDrawer.open()   // queueDrawer is in main.qml scope
+}
+```
+
+This works because all items inside an `ApplicationWindow` share the same QML scope — `main.qml`'s `Drawer`, `Popup` and functions are accessible from child components.
+
+---
+
+## 17.7 Initial Queue Playback
+
+When `MinimalView` loads (i.e., `launchMode !== "Library"`), `main.qml` fires `Component.onCompleted` to start playing immediately:
+
+```qml
+Component.onCompleted: {
+    if (launchMode !== "Library") {
+        let newQueue = [];
+        for (let i = 0; i < trackModel.rowCount(); i++) {
+            newQueue.push(trackModel.get(i));
+        }
+        window.playbackQueue = newQueue;
+        if (newQueue.length > 0) {
+            window.playTrackAtIndex(0, "CLI");
+        }
+    }
+}
+```
+
+This fires after the QML engine finishes loading, by which time `loadSpecificFiles()` has already populated `trackModel` synchronously.
+
+---
+
+## 17.8 Why MinimalView Is in Its Own File
+
+Keeping the compact view isolated in its own file rather than as a conditional layout inside `main.qml` provides several benefits:
+
+1. **No layout collisions** — the Library layout's `ColumnLayout` anchors don't interfere
+2. **Independent sizing** — the component can define its own proportions freely
+3. **Readability** — the 1300+ line main.qml would be even harder to navigate with embedded dual-mode logic
+4. **Testability** — the file can be previewed in Qt Quick Designer independently
+
+
+<div class="page-break"></div>
+
+<a id="18_qml_playlist_views.md"></a>
+
+# Chapter 18 — QML Playlist Views
+
+## 18.1 Overview
+
+The playlist UI consists of three QML files that work together:
+
+| File | Purpose |
+|------|---------|
+| `PlaylistsView.qml` | Grid of playlist tiles (browse all playlists) |
+| `PlaylistDetailsView.qml` | Track list for a single playlist (with edit mode) |
+| `PlaylistPopup.qml` | Centralized popup container for add/create/menu popups |
+
+These views rely on `PlaylistManager` (Chapter 9) for all data operations and on `TrackModel` for displaying track metadata.
+
+---
+
+## 18.2 PlaylistsView.qml — The Playlist Grid
+
+This view displays all playlists as a grid of tiles, similar to how the library shows artist or album tiles.
+
+### Data Loading
+
+```qml
+Item {
+    id: playlistsViewRoot
+
+    property var modelList: playlistManager.getPlaylists()
+
+    Connections {
+        target: playlistManager
+        function onPlaylistsChanged() {
+            playlistsViewRoot.modelList = playlistManager.getPlaylists();
+        }
+    }
+}
+```
+
+The playlist list is fetched once at load time via `getPlaylists()`, then automatically refreshed whenever `playlistsChanged()` fires (after a create or delete operation).
+
+### The Grid Layout
+
+```qml
+GridView {
+    model: playlistsViewRoot.modelList
+    cellWidth: 200
+    cellHeight: 200
+
+    delegate: Item {
+        // Each tile: a dark rectangle with an icon and playlist name
+        Rectangle {
+            color: "#202025"
+            radius: 8
+
+            // Playlist icon placeholder
+            Image { source: "qrc:/qml/icons/view_list.svg" }
+
+            // Playlist name
+            Text { text: modelData; color: "white" }
+
+            MouseArea {
+                acceptedButtons: Qt.LeftButton | Qt.RightButton
+
+                onClicked: {
+                    if (mouse.button == Qt.LeftButton) {
+                        // Navigate into the playlist
+                        trackModel.filterByPlaylist(modelData,
+                            playlistManager.getPlaylistTracks(modelData));
+                        mainStack.push("qrc:/qml/PlaylistDetailsView.qml",
+                            { playlistName: modelData });
+                    } else if (mouse.button == Qt.RightButton) {
+                        // Open context menu
+                        playlistMenuPopup.playlistName = modelData;
+                        playlistMenuPopup.open();
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+Left-click navigates into the playlist. Right-click opens the context menu popup (Open, Add Songs, Rename, Delete).
+
+---
+
+## 18.3 PlaylistDetailsView.qml — Track List
+
+When a user clicks a playlist tile, the `StackView` pushes `PlaylistDetailsView` with the playlist name as a property.
+
+### Key Properties
+
+```qml
+Item {
+    id: playlistDetailsRoot
+    property string playlistName: ""
+    property bool isEditMode: false
+}
+```
+
+- `playlistName`: Set when the view is pushed onto the stack
+- `isEditMode`: Toggles between browse mode and edit mode (shows remove/reorder controls)
+
+### Live Updates via Signal
+
+```qml
+Connections {
+    target: playlistManager
+    function onPlaylistTracksChanged(pName) {
+        if (pName === playlistName) {
+            trackModel.filterByPlaylist(playlistName,
+                playlistManager.getPlaylistTracks(playlistName));
+        }
+    }
+}
+```
+
+When tracks are added, removed, moved, or sorted in the current playlist, the `playlistTracksChanged` signal triggers a refresh. The filter is scoped to only update when the signal matches the current playlist name.
+
+### Toolbar
+
+The top of the view shows action buttons:
+
+| Button | Action |
+|--------|--------|
+| **Add Content** | Opens the `addPopup` (shows all library tracks) |
+| **Edit Playlist / Done Editing** | Toggles edit mode (show remove buttons, reorder handles) |
+| **Sort by Title** | Calls `playlistManager.sortPlaylist(name, "title")` |
+| **Sort by Artist** | Calls `playlistManager.sortPlaylist(name, "artist")` |
+| **Sort by Track #** | Calls `playlistManager.sortPlaylist(name, "trackNumber")` |
+
+### Edit Mode
+
+In edit mode, each track row shows:
+- A **remove button** that calls `playlistManager.removeTrack(playlistName, filePath)`
+- Visual indicators for reordering (calls `playlistManager.moveTrack(...)`)
+
+---
+
+## 18.4 PlaylistPopup.qml — Centralized Popup Container
+
+`PlaylistPopup` is an `Item` that bundles three related popups into a single, reusable component:
+
+```qml
+Item {
+    id: root
+    property var playlistManager: null
+
+    property alias addPopup: addPopup
+    property alias playlistMenuPopup: playlistMenuPopup
+    property alias createPlaylistPopup: createPlaylistPopup
+
+    function openAddPopup(manager, name) { ... }
+    function openCreatePlaylistPopup(manager) { ... }
+}
+```
+
+### The Three Popups
+
+#### `addPopup` — Add Tracks to a Playlist
+
+A large popup (800×650) that displays the entire library as a scrollable list. Each track has an "Add" button that:
+1. Calls `playlistManager.addTrack(playlistName, filePath)`
+2. Changes the button text to "Added" and disables it
+
+The search/filter within this popup operates independently of the main library filter — it iterates over `trackModel.getAllTracks()` to always show the full library.
+
+#### `createPlaylistPopup` — Create a New Playlist
+
+A compact popup (600×200) with:
+- A `TextField` for the playlist name
+- "Cancel" and "Create" buttons
+- On create: calls `playlistManager.createPlaylist(name)`, clears the field, and closes
+
+#### `playlistMenuPopup` — Right-Click Context Menu
+
+A small popup showing the playlist name and a column of action buttons:
+
+| Button | Action |
+|--------|--------|
+| **Open** | Navigates into the playlist |
+| **Add Songs** | Opens the `addPopup` for this playlist |
+| **Rename** | (Placeholder for rename functionality) |
+| **Delete** | Calls `playlistManager.deletePlaylist(name)` |
+
+---
+
+## 18.5 How the Popups Are Exposed Globally
+
+`PlaylistPopup` is instantiated inside `AppPopups.qml` (Chapter 19), which is loaded by `main.qml`. The popup functions are exposed as global aliases so any view can open them:
+
+```qml
+// In main.qml:
+property alias addPopup: appPopups.addPopup
+property alias playlistMenuPopup: appPopups.playlistMenuPopup
+
+function openAddPopup(manager, name) {
+    appPopups.playlistPopups.openAddPopup(manager, name);
+}
+function openCreatePlaylistPopup(manager) {
+    appPopups.playlistPopups.openCreatePlaylistPopup(manager);
+}
+```
+
+This architecture means `PlaylistDetailsView`, `LibraryView`, and any other view can call `openAddPopup()` or `openCreatePlaylistPopup()` without needing a direct reference to the popup component.
+
+
+<div class="page-break"></div>
+
+<a id="19_qml_popup_architecture.md"></a>
+
+# Chapter 19 — AppPopups: Centralized Popup Architecture
+
+## 19.1 The Problem This Solves
+
+Before `AppPopups.qml` existed, popups were defined inline in whichever QML file needed them — volume controls in `main.qml`, settings in `LibraryView.qml`, playlist popups in `PlaylistDetailsView.qml`, and so on. This led to:
+
+- **Duplication**: The same popup (e.g., queue drawer) was needed from multiple views
+- **Access issues**: A popup defined in `LibraryView.qml` couldn't be opened from `MinimalView.qml`
+- **Z-order bugs**: Popups nested inside views would render behind other views
+- **Maintenance pain**: Changing a popup's behavior required hunting through multiple files
+
+The solution: extract **all popups** into a single file (`AppPopups.qml`) that lives at the root level of the QML scene graph. Individual views access popups through global aliases.
+
+---
+
+## 19.2 Architecture
+
+```
+main.qml
+  ├── AppPopups { id: appPopups }     ← All popups live here
+  │     ├── volumeOSDPopup
+  │     ├── mainMenuPopup
+  │     ├── settingsPopup
+  │     ├── eqPopup
+  │     ├── volumePopup
+  │     ├── nowPlayingPopup
+  │     ├── shortcutsPopup
+  │     ├── supportPopup
+  │     ├── scanningPopup
+  │     ├── queueDrawer
+  │     └── PlaylistPopup (addPopup, createPlaylistPopup, playlistMenuPopup)
+  │
+  ├── LibraryView { }                 ← Opens popups via root aliases
+  ├── MinimalView { }                 ← Opens popups via root aliases
+  └── GamepadControl { }              ← References popups via root aliases
+```
+
+### How Aliases Work
+
+`AppPopups.qml` exposes each popup via `property alias`:
+
+```qml
+// AppPopups.qml
+Item {
+    id: root
+    anchors.fill: parent
+
+    // Exposed aliases
+    property alias volumeOSDPopup: volumeOSDPopup
+    property alias mainMenuPopup: mainMenuPopup
+    property alias settingsPopup: settingsPopup
+    property alias eqPopup: eqPopup
+    property alias volumePopup: volumePopup
+    property alias nowPlayingPopup: nowPlayingPopup
+    property alias shortcutsPopup: shortcutsPopup
+    property alias supportPopup: supportPopup
+    property alias scanningPopup: scanningPopup
+    property alias queueDrawer: queueDrawer
+    property alias queueListView: queueListView
+
+    // ... popup definitions below ...
+}
+```
+
+`main.qml` then re-exports these to the root window:
+
+```qml
+ApplicationWindow {
+    id: root
+
+    AppPopups {
+        id: appPopups
+        window: root
+    }
+
+    // Root-level aliases: any child view can access these
+    property alias volumeOSDPopup: appPopups.volumeOSDPopup
+    property alias mainMenuPopup: appPopups.mainMenuPopup
+    // ... etc
+}
+```
+
+Any QML view anywhere in the scene tree can then call:
+```qml
+mainMenuPopup.open()
+nowPlayingPopup.open()
+queueDrawer.open()
+```
+
+---
+
+## 19.3 Dependency Injection
+
+`AppPopups` needs access to several objects from the main window context. These are passed in as properties:
+
+```qml
+AppPopups {
+    id: appPopups
+    window: root                           // For window state (fullscreen, close, etc.)
+    globalGamepadManager: gamepadControl   // For gamepad zone evaluation
+    folderDialog: folderDialogInstance      // For settings → add folder
+    sessionSettings: sessionSettingsObj     // For session persistence
+}
+```
+
+Inside `AppPopups.qml`, convenience properties map window state:
+
+```qml
+property string launchMode: window && window.launchMode ? window.launchMode : "Library"
+property string applicationVersion: window && window.applicationVersion
+    ? window.applicationVersion : "1.3-beta"
+```
+
+---
+
+## 19.4 Complete Popup Inventory
+
+| # | Popup ID | Type | Size | Modal | Purpose |
+|---|----------|------|------|-------|---------|
+| 1 | `volumeOSDPopup` | Popup | 250×60 | No | Transient volume level indicator (auto-closes) |
+| 2 | `mainMenuPopup` | Popup | 520×520 | Yes | App main menu (Library, Now Playing, Queue, EQ, Settings, etc.) |
+| 3 | `settingsPopup` | Popup | 600×500 | Yes | Library folder management, rescanning |
+| 4 | `eqPopup` | Popup | 600×520 | Yes | Wraps `EqualizerView.qml` inside a popup |
+| 5 | `volumePopup` | Popup | 200×300 | No | Vertical volume slider popup |
+| 6 | `nowPlayingPopup` | Popup | Full window | Yes | Full-screen overlay wrapping `NowPlayingView.qml` |
+| 7 | `shortcutsPopup` | Popup | 550×540 | Yes | Keyboard/gamepad shortcut reference table |
+| 8 | `supportPopup` | Popup | 500×440 | Yes | About/support information |
+| 9 | `scanningPopup` | Popup | 300×180 | Yes | Scanning progress indicator (shown during directory scan) |
+| 10 | `queueDrawer` | Drawer | 350×full | No | Side drawer showing the playback queue |
+| 11 | `playlistPopups` | Item | various | Yes | Bundles `addPopup`, `createPlaylistPopup`, `playlistMenuPopup` |
+
+### Modal vs. Non-Modal
+
+- **Modal popups** (`modal: true`) dim the background and capture all input until closed. Used for popups that require focus (settings, EQ, shortcuts).
+- **Non-modal popups** (`modal: false`) allow the user to continue interacting with the main UI. Used for transient indicators (volume OSD) and supplementary panels (queue drawer, volume slider).
+
+---
+
+## 19.5 Volume OSD — Pattern for Transient Popups
+
+The Volume OSD is a good example of a transient, self-closing popup:
+
+```qml
+Popup {
+    id: volumeOSDPopup
+    modal: false
+    focus: false
+    closePolicy: Popup.NoAutoClose   // We control closing ourselves
+
+    Timer {
+        id: volumeOSDTimer
+        interval: 1500
+        onTriggered: volumeOSDPopup.close()
+    }
+
+    // Called externally:
+    function show() {
+        volumeOSDPopup.open();
+        volumeOSDTimer.restart();   // Reset the auto-close timer
+    }
+}
+```
+
+Key design choices:
+- `focus: false` — the OSD must not steal keyboard focus from the player
+- `closePolicy: Popup.NoAutoClose` — we manage closing via the timer, not clicks
+- `Timer.restart()` — if the user keeps adjusting volume, the popup stays open and the timer resets each time
+
+---
+
+## 19.6 Queue Drawer — The Side Panel
+
+The `queueDrawer` uses Qt Quick Controls' `Drawer` type instead of `Popup`:
+
+```qml
+Drawer {
+    id: queueDrawer
+    edge: Qt.RightEdge
+    width: 350
+    height: parent.height
+    modal: false          // User can still interact with the player
+
+    ListView {
+        id: queueListView
+        model: root.window ? root.window.playbackQueue : []
+        // ... track delegates with cover art, title, artist
+    }
+}
+```
+
+The drawer slides in from the right edge and displays the current playback queue. It is non-modal, so the user can keep the queue visible while browsing the library.
+
+---
+
+## 19.7 Scanning Progress Popup — Signal Integration
+
+The scanning popup demonstrates how a popup can react to C++ signals:
+
+```qml
+Popup {
+    id: scanningPopup
+    modal: true
+    closePolicy: Popup.NoAutoClose   // Cannot close while scanning
+
+    Connections {
+        target: libraryScanner
+        function onScanFinished(count) {
+            scanningPopup.close();
+        }
+    }
+
+    BusyIndicator { running: scanningPopup.opened }
+    Text { text: "Scanning for music..." }
+}
+```
+
+The popup opens when the user clicks "Rescan" in settings, and automatically closes when the C++ `LibraryScanner` emits `scanFinished()`. The `NoAutoClose` policy prevents the user from dismissing it prematurely.
+
+
+<div class="page-break"></div>
+
+<a id="20_launch_modes_and_ipc.md"></a>
+
+# Chapter 20 — Launch Modes and Single-Instance IPC
+
+When a user double-clicks an audio file in a file manager, or selects multiple files and opens them, the OS spawns the application with those file paths as command-line arguments. This chapter explains how MLP Player handles these situations correctly — launching the right UI, and preventing multiple windows from opening.
+
+---
+
+## 20.1 The Problem: Multiple File Selections
+
+When a user selects five `.mp3` files and double-clicks them in Nautilus or Dolphin, the file manager typically:
+
+1. Reads the `MimeType=` field from `MusicPlayer.desktop`
+2. Confirms our app handles `audio/mpeg`
+3. **Spawns one process per file**, each with one file path as `argv[1]`
+
+Without any protection, this results in five separate application windows. This is the problem the IPC system solves.
+
+> **Note:** Since v1.3, the IPC behaviour is **mode-dependent**. Minimal and Queue mode instances are single-instanced (redirected to the primary window). Library mode instances always open a new, independent window.
+
+---
+
+## 20.2 The Three Launch Modes
+
+`main.cpp` reads `argv` immediately after app construction and classifies the launch into one of three modes:
+
+```cpp
+QStringList args     = QCoreApplication::arguments();
+QStringList filepath = args.mid(1);   // argv[0] is the executable
+
+QString launchMode;
+if (filepath.isEmpty())        launchMode = "Library";
+else if (filepath.size() == 1) launchMode = "Minimal";
+else                           launchMode = "Queue";
+```
+
+| Mode | Trigger | Window | Data Source |
+|---|---|---|---|
+| **Library** | Launched via app icon or launcher (no args) | 1260×768 Maximised | SQLite database via `loadDatabase()` |
+| **Minimal** | One audio file opened via file manager | 700×350 Windowed | Single file via `loadSpecificFiles([file])` |
+| **Queue** | Multiple audio files opened at once | 700×350 Windowed | All files via `loadSpecificFiles(files)` |
+
+`launchMode` is then exposed to QML as a context property:
+```cpp
+engine.rootContext()->setContextProperty("launchMode", launchMode);
+```
+
+---
+
+## 20.3 Impact on QML Layout
+
+The `launchMode` string drives the entire UI layout from a single root decision in `main.qml`:
+
+```qml
+ApplicationWindow {
+    width:      launchMode === "Library" ? 1260 : 700
+    height:     launchMode === "Library" ?  768 : 350
+    visibility: launchMode === "Library" ? Window.Maximized : Window.Windowed
+
+    // Library mode: show full browser UI
+    Item {
+        visible: launchMode === "Library"
+        LibraryView { id: libraryViewMain; anchors.fill: parent }
+    }
+
+    // Minimal/Queue mode: show compact now-playing view
+    Item {
+        visible: launchMode !== "Library"
+        MinimalView { id: minimalViewMain; anchors.fill: parent }
+    }
+
+    // Bottom playback bar and title bar are Library-only
+    Rectangle { id: titleBar;    visible: launchMode === "Library" ... }
+    Rectangle { id: playbackBar; visible: launchMode === "Library" ... }
+}
+```
+
+> **Key design principle:** `launchMode` is evaluated **at startup only** and never changes while the app is running. It is a constant string, not a reactive property.
+
+---
+
+## 20.4 `loadSpecificFiles` vs `loadDatabase`
+
+In Library mode, `LibraryScanner::loadDatabase()` reads from the SQLite database (which may contain thousands of tracks). This is appropriate because the full grid browser needs all tracks.
+
+In Minimal/Queue mode, there is no need to open a database at all:
+
+```cpp
+// Parses metadata from the provided file list only — no SQLite
+void LibraryScanner::loadSpecificFiles(const QStringList &filePaths) {
+    QVector<Track> tracks;
+    for (const QString &filePath : filePaths) {
+        Track track;
+        track.filePath = filePath;
+        TagLib::FileRef f(filePath.toUtf8().constData());
+        if (!f.isNull() && f.tag()) {
+            TagLib::Tag *tag = f.tag();
+            track.title  = QString::fromStdWString(tag->title().toWString());
+            track.artist = QString::fromStdWString(tag->artist().toWString());
+            // ... cover art detection ...
+        }
+        tracks.append(track);
+    }
+    m_tracks = tracks;
+    emit tracksAdded(tracks);
+}
+```
+
+This approach is intentional:
+- **Faster startup** — no SQL connection, no disk I/O beyond the files themselves
+- **No pollution** — these files are not stored in the library database
+- **Isolation** — the Minimal view is completely independent of the library state
+
+---
+
+## 20.5 Single-Instance IPC: The Socket Mechanism
+
+To prevent five windows from spawning when a user selects five files, we use a Unix domain socket named `MLP_MusicPlayerIPC`.
+
+**Every launch** (primary or secondary) starts by probing the socket:
+
+```cpp
+bool isIpcServerRunning = false;
+QLocalSocket socket;
+socket.connectToServer("MLP_MusicPlayerIPC");
+
+if (socket.waitForConnected(500)) {
+    isIpcServerRunning = true;
+    if (launchMode != "Library") {
+        // Secondary Minimal/Queue instance — send files and exit
+        if (!filepath.isEmpty()) {
+            socket.write(filepath.join('\n').toUtf8());
+            socket.waitForBytesWritten(1000);
+        }
+        return 0;   // Exit — no window created
+    }
+    // Library mode — disconnect and continue as a new instance
+    socket.disconnectFromServer();
+}
+
+// No server running, or Library mode fell through — continue as primary instance
+```
+
+The key difference from a traditional single-instance guard: **Library mode never exits early**. If a user explicitly opens the app from the launcher, a new full Library window is always created, even if another Library window is already open.
+
+The 500ms timeout is generous enough to handle a slow primary startup but short enough not to make the OS file association feel laggy.
+
+---
+
+## 20.6 The IPC Server (Primary Instance)
+
+Once the primary instance passes the socket probe, it binds the server socket to accept future connections — but **only if no server is already running**:
+
+```cpp
+if (!isIpcServerRunning) {
+    QLocalServer::removeServer("MLP_MusicPlayerIPC");  // Clean stale socket file
+    QLocalServer *server = new QLocalServer(&app);
+    server->listen("MLP_MusicPlayerIPC");
+
+    QObject::connect(server, &QLocalServer::newConnection,
+        [&libraryScanner, server]() {
+            QLocalSocket *clientSocket = server->nextPendingConnection();
+
+            QObject::connect(clientSocket, &QLocalSocket::readyRead,
+                [&libraryScanner, clientSocket]() {
+                    QByteArray data = clientSocket->readAll();
+                    QStringList newFiles = QString::fromUtf8(data)
+                        .split('\n', Qt::SkipEmptyParts);
+                    if (!newFiles.isEmpty()) {
+                        libraryScanner.appendSpecificFiles(newFiles);
+                    }
+                });
+
+            QObject::connect(clientSocket, &QLocalSocket::disconnected,
+                             clientSocket, &QLocalSocket::deleteLater);
+        });
+}
+```
+
+The `!isIpcServerRunning` guard prevents a Library mode instance from trying to bind a socket that a Minimal/Queue instance already owns. This avoids `listen()` failures due to address-in-use errors.
+
+`QLocalServer::removeServer()` removes the socket file from the filesystem if a previous crash left it behind. Without this, the listen call would fail.
+
+---
+
+## 20.7 `appendSpecificFiles` — Append Without Reset
+
+When the primary instance receives new file paths over the socket, it calls `appendSpecificFiles` (not `loadSpecificFiles`):
+
+```cpp
+void LibraryScanner::appendSpecificFiles(const QStringList &filePaths) {
+    QVector<Track> newTracks;
+
+    for (const QString &filePath : filePaths) {
+        // parse tags from filePath...
+        newTracks.append(track);
+    }
+
+    // Append to existing track list — do NOT clear it
+    m_tracks.append(newTracks);
+
+    // Emit the append signal (not tracksAdded)
+    emit tracksAppended(newTracks);
+}
+```
+
+The critical difference between `tracksAdded` and `tracksAppended`:
+
+| Signal | TrackModel handler | Effect |
+|---|---|---|
+| `tracksAdded` | `setTracks()` → `beginResetModel` | Clears the model entirely, repopulates |
+| `tracksAppended` | `addTracks()` → `beginInsertRows` | Adds rows at the end without disturbing existing data |
+
+Using `beginInsertRows` instead of `beginResetModel` means:
+- The existing queue is not lost
+- Currently playing track continues uninterrupted
+- QML animations (e.g., queue drawer add transition) fire correctly
+
+---
+
+## 20.8 QML Response: `onTracksAppended`
+
+`main.qml` listens for both signals on `libraryScanner`:
+
+```qml
+Connections {
+    target: libraryScanner
+
+    function onTracksAdded(tracks) {
+        // Full replacement: update queue from entire model
+        // Used at startup (Library mode) and after directory scans
+        if (!startupRestoreTimer.running && trackModel.rowCount() > 0) {
+            let newQueue = [];
+            for (let i = 0; i < trackModel.rowCount(); i++) {
+                newQueue.push(trackModel.get(i));
+            }
+            window.playbackQueue = newQueue;
+            window.playTrackAtIndex(0, "IPC");
+        }
+    }
+
+    function onTracksAppended(tracks) {
+        // Append-only: add new tracks to the existing queue
+        // Used when secondary instances send their files via IPC
+        if (window.visibility !== Window.Hidden) {
+            let newQueue = [];
+            for (let i = 0; i < trackModel.rowCount(); i++) {
+                newQueue.push(trackModel.get(i));
+            }
+
+            let wasEmpty = window.playbackQueue.length === 0;
+            window.playbackQueue = newQueue;
+
+            if (wasEmpty) {
+                window.playTrackAtIndex(0, "IPC");  // Autoplay if nothing was playing
+            }
+            // If already playing: new tracks are in queue but playback continues
+        }
+    }
+}
+```
+
+---
+
+## 20.9 Complete Multi-File Flow Example
+
+```
+User selects 5 MP3 files in Dolphin and presses Enter
+
+OS calls MusicPlayer.desktop → Exec %F handles 5 files:
+  Spawns: MusicPlayer file1.mp3
+  Spawns: MusicPlayer file2.mp3
+  Spawns: MusicPlayer file3.mp3
+  Spawns: MusicPlayer file4.mp3
+  Spawns: MusicPlayer file5.mp3
+
+Process 1 (file1.mp3):
+  IPC probe → no server running → becomes primary instance
+  launchMode = "Minimal" (one file)
+  loadSpecificFiles([file1.mp3])
+  Binds QLocalServer → "MLP_MusicPlayerIPC"
+  Opens MinimalView window → starts playing file1.mp3
+
+Process 2 (file2.mp3), arriving ~50ms later:
+  IPC probe → connects to Process 1's server
+  launchMode = "Minimal" → single-instanced → sends file and exits
+  return 0 → Process 2 exits (no window)
+
+Process 3-5, similarly:
+  Each sends their filepath and exits immediately
+
+Primary instance (Process 1):
+  Receives "file2.mp3", "file3.mp3", "file4.mp3", "file5.mp3" via readyRead
+  appendSpecificFiles([file2, file3, file4, file5])
+  Queue: [file1*, file2, file3, file4, file5]  (* = currently playing)
+```
+
+**Result**: One window, correct queue, playback of file1 starts immediately, files 2-5 are queued.
+
+---
+
+## 20.10 Library Mode: Independent Windows
+
+```
+User clicks "MLP Player" in KDE launcher
+  Process A: IPC probe → no server → becomes primary
+  launchMode = "Library"
+  Binds QLocalServer
+  Opens full Library window
+
+User clicks "MLP Player" in launcher again
+  Process B: IPC probe → connects to Process A's server
+  launchMode = "Library" → NOT single-instanced → disconnects
+  isIpcServerRunning = true → skips binding a new server
+  Opens its own full Library window
+
+Result: Two independent Library windows, each with its own state
+```
+
+This design allows power users to have multiple Library windows open simultaneously — each browsing different artists or albums — while file-manager launches always consolidate into a single Minimal/Queue window.
+
+
+
+<div class="page-break"></div>
+
+<a id="21_os_integration.md"></a>
+
+# Chapter 21 — OS Integration: Desktop File and MIME Registration
+
+This chapter explains how MLP Player integrates with the Linux desktop environment — registering itself as an audio player, appearing in the application launcher, and receiving files from the file manager.
+
+---
+
+## 21.1 What Is a `.desktop` File?
+
+A `.desktop` file is a standardised text file defined by the [freedesktop.org Desktop Entry Specification](https://specifications.freedesktop.org/desktop-entry-spec/latest/). It tells the desktop environment:
+
+- What the application is named and where to find its icon
+- Which command to run to launch it
+- Which file types (MIME types) it can open
+
+Without a `.desktop` file, the OS application launcher and file managers don't know the app exists.
+
+---
+
+## 21.2 MusicPlayer.desktop — Full Contents
+
+```desktop
+[Desktop Entry]
+Name=MLP Player
+Comment=A modern local music player built with Qt
+Type=Application
+Exec=sh -c 'exec "$HOME/.var/app/com.musicplayer.mlmPlayer/MusicPlayer" "$@"' dummy %F
+Icon=MusicPlayer
+Categories=Audio;Player;Music;
+Terminal=false
+StartupNotify=true
+MimeType=audio/aac;audio/x-flac;audio/flac;audio/mp4;audio/mpeg;audio/mpegurl;audio/ogg;audio/vnd.rn-realaudio;audio/vorbis;audio/x-mp3;audio/x-mpegurl;audio/x-ms-wma;audio/x-musepack;audio/x-oggflac;audio/x-pn-realaudio;audio/x-scpls;audio/x-speex;audio/x-vorbis+ogg;audio/x-wav;audio/wav;
+```
+
+---
+
+## 21.3 The `Exec` Field — Portable Path Resolution
+
+Hardcoding an absolute path like `Exec=/home/lordtael125/.var/...` would make the desktop file non-portable — it would break on any other machine.
+
+Instead, the `Exec` field uses a shell wrapper:
+
+```desktop
+Exec=sh -c 'exec "$HOME/.var/app/com.musicplayer.mlmPlayer/MusicPlayer" "$@"' dummy %F
+```
+
+Breaking this down:
+
+| Part | Meaning |
+|---|---|
+| `sh -c '...'` | Run the given string in a new `/bin/sh` shell |
+| `exec "$HOME/..."` | Replace the shell process with the binary (no extra process left behind) |
+| `"$HOME"` | Resolves to the current user's home directory at runtime (portable!) |
+| `"$@"` | Passes all arguments to the binary |
+| `dummy` | The `$0` (shell name) placeholder — required by `sh -c` when using `$@` |
+| `%F` | Freedesktop placeholder: replaced by a list of all selected files |
+
+### `%F` vs `%f`
+
+| Placeholder | Behaviour |
+|---|---|
+| `%F` | All selected files are passed to a **single** process launch |
+| `%f` | The app is launched **once per file** (creates multiple processes) |
+
+We use `%F` so that selecting 10 files results in one process with 10 arguments — which our IPC system then handles correctly (see Chapter 20).
+
+---
+
+## 21.4 MIME Type List
+
+The `MimeType=` line is what tells file managers and the OS "this app can open these file types." Our registration covers all common audio formats:
+
+| MIME Type | Format |
+|---|---|
+| `audio/mpeg` | MP3 |
+| `audio/x-mp3` | MP3 (alternative MIME) |
+| `audio/x-flac` / `audio/flac` | FLAC lossless |
+| `audio/mp4` | M4A / AAC in MP4 container |
+| `audio/aac` | Raw AAC |
+| `audio/ogg` | Ogg Vorbis |
+| `audio/x-vorbis+ogg` | Ogg Vorbis (alternative MIME) |
+| `audio/x-wav` / `audio/wav` | WAV uncompressed |
+| `audio/x-ms-wma` | Windows Media Audio |
+| `audio/mpegurl` / `audio/x-mpegurl` | M3U playlists |
+| `audio/x-scpls` | PLS playlists |
+| `audio/vorbis` | Vorbis codec |
+| `audio/x-speex` | Speex codec |
+| `audio/x-musepack` | Musepack |
+| `audio/vnd.rn-realaudio` / `audio/x-pn-realaudio` | RealAudio |
+
+When you right-click an audio file and choose "Open With", MLP Player will appear in the list because of these registrations.
+
+---
+
+## 21.5 User-Space Installation (No Root Required)
+
+Standard application installs require root (`sudo make install`) and place files in `/usr/`, which needs admin rights. MLP Player instead installs into the user's own home directory.
+
+### Install Destinations
+
+| File | Destination |
+|---|---|
+| `MusicPlayer` binary | `~/.var/app/com.musicplayer.mlmPlayer/MusicPlayer` |
+| `MusicPlayer.desktop` | `~/.local/share/applications/MusicPlayer.desktop` |
+| `AppIcon.png` | `~/.local/share/icons/hicolor/512x512/apps/MusicPlayer.png` |
+
+These paths follow the [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir-spec/latest/). All freedesktop-compliant desktops (GNOME, KDE, XFCE, etc.) check `~/.local/share/` for user-installed applications.
+
+### CMakeLists.txt Install Rules
+
+```cmake
+install(TARGETS MusicPlayer
+    RUNTIME DESTINATION "$ENV{HOME}/.var/app/com.musicplayer.mlmPlayer")
+
+install(FILES "Dist/Linux/MusicPlayer.desktop"
+    DESTINATION "$ENV{HOME}/.local/share/applications")
+
+install(FILES "Dist/Linux/AppIcon.png"
+    DESTINATION "$ENV{HOME}/.local/share/icons/hicolor/512x512/apps"
+    RENAME MusicPlayer.png)
+```
+
+`$ENV{HOME}` in CMake resolves to the home directory of the user running `make install`. This ensures portability.
+
+---
+
+## 21.6 Registering MIME Associations
+
+After running `make install`, the desktop file is on disk but the MIME database doesn't know about it yet. You must update it:
+
+```bash
+update-desktop-database ~/.local/share/applications
+```
+
+This reads all `.desktop` files in the user applications directory, parses their `MimeType=` declarations, and writes a binary MIME database cache (`mimeinfo.cache`).
+
+After this command:
+- Double-clicking an `.mp3` file will offer MLP Player as a handler
+- `xdg-open song.flac` will launch MLP Player
+- The app appears in "Open With" menus for all registered MIME types
+
+> **Note:** On some desktops (GNOME), you may also need `update-mime-database ~/.local/share/mime` if you have custom MIME type XML files.
+
+---
+
+## 21.7 Icon Resolution
+
+The icon name in the `.desktop` file is:
+```desktop
+Icon=MusicPlayer
+```
+
+This is a **name**, not a path. The desktop environment searches for it in the icon theme directories. Since we install to:
+```
+~/.local/share/icons/hicolor/512x512/apps/MusicPlayer.png
+```
+
+The `hicolor` theme (the fallback theme on all freedesktop-compliant desktops) will find it automatically. The `512x512` size folder means the system can scale it to any size (16px launcher, 48px file manager, 256px Dock).
+
+---
+
+## 21.8 Testing the Integration
+
+After `make install` and `update-desktop-database`:
+
+```bash
+# Verify the desktop file is valid
+desktop-file-validate ~/.local/share/applications/MusicPlayer.desktop
+
+# Test MIME association
+xdg-open /path/to/song.mp3
+
+# Test multi-file launch (simulates file manager selection)
+MusicPlayer song1.mp3 song2.mp3 song3.mp3
+
+# Check which app handles audio/mpeg
+xdg-mime query default audio/mpeg
+```
+
+
+<div class="page-break"></div>
+
+<a id="22_dataflow.md"></a>
+
+# Chapter 22 — Complete System Dataflow
 
 This chapter ties everything together with detailed data flow diagrams covering the three major user journeys.
 
 ---
 
-## 14.1 Application Startup Flow
+## 22.1 Application Startup Flow
 
-```
-Program starts → main() runs
-│
-├─ [TagLib] Silence debug output
-│
-├─ [Qt] Set Material Dark theme env vars
-│
-├─ QApplication app constructed
-│
-├─ qmlRegisterUncreatableType<Equalizer>
-│   → QML can now reference Equalizer* without creating instances
-│
-├─ AudioEngine audioEngine constructed
-│   ├─ ma_engine_init() → opens system audio device (PulseAudio/WASAPI)
-│   ├─ Equalizer *eq = new Equalizer(this)
-│   ├─ 10 x ma_peak_node_init() → EQ filter chain created
-│   ├─ ma_node_attach() × 10 → chain linked: sound→EQ0→EQ1→...→EQ9→speaker
-│   └─ QTimer starts (250ms interval)
-│
-├─ LibraryScanner libraryScanner constructed
-│   ├─ initializeDatabase() → opens/creates tracks.db SQLite file
-│   └─ loadDatabase() → reads all rows, queues emit tracksAdded()
-│
-├─ TrackModel trackModel constructed
-│
-├─ connect(libraryScanner.tracksAdded → trackModel.setTracks)
-│
-├─ QQmlApplicationEngine engine constructed
-│
-├─ engine.addImageProvider("musiccover", new CoverArtProvider)
-│
-├─ engine.rootContext()->setContextProperty × 3
-│   → "audioEngine", "libraryScanner", "trackModel" now in QML global scope
-│
-├─ engine.load("qrc:/qml/main.qml")
-│   ├─ Qt parses main.qml, creates ApplicationWindow
-│   ├─ ApplicationWindow creates LibraryView (embedded)
-│   │   └─ LibraryView.StackView.initialItem = trackGridComponent
-│   ├─ LibraryView trackGridComponent: model = trackModel (bound)
-│   └─ QML engine completes
-│
-└─ app.exec() → Event loop begins
-    │
-    └─ QTimer fires (from loadDatabase's singleShot):
-        tracksAdded(allTracks) → trackModel.setTracks(allTracks)
-        → beginResetModel → endResetModel
-        → LibraryView GridView refreshes (shows all cached tracks)
-```
+- **Program starts** &rarr; `main()` runs
+  - `[TagLib]` Silence debug output
+  - `[Qt]` Set Material Dark theme env vars
+  - `QApplication` app constructed
+  - Parse command-line arguments (`argv`)
+    - `filepath = args.mid(1)` (list of files passed by file manager)
+  - IPC probe: `QLocalSocket` &rarr; `MLP_MusicPlayerIPC`
+    - **Socket connects** &rarr; primary instance is running
+      - Send filepath over socket and `return 0` (process ends here)
+    - **Socket fails** &rarr; we ARE the primary instance, continue
+  - Determine `launchMode`
+    - `filepath` empty &rarr; `"Library"`
+    - `filepath` size == 1 &rarr; `"Minimal"`
+    - `filepath` size > 1 &rarr; `"Queue"`
+  - `qmlRegisterUncreatableType<Equalizer>`
+  - `AudioEngine` (`audioEngine`) constructed
+    - `ma_engine_init()` &rarr; opens system audio device (PulseAudio/WASAPI)
+    - `Equalizer *eq = new Equalizer(this)`
+    - 10 &times; `ma_peak_node_init()` &rarr; EQ filter chain created
+    - 10 &times; `ma_node_attach()` &rarr; chain linked: sound &rarr; EQ0 &rarr; &hellip; &rarr; EQ9 &rarr; speaker
+    - `QTimer` starts (250ms interval)
+  - `LibraryScanner` (`libraryScanner`) constructed
+    - `initializeDatabase()` &rarr; opens/creates `tracks.db` SQLite file
+  - `TrackModel` (`trackModel`) constructed
+  - `connect(libraryScanner.tracksAdded &rarr; trackModel.setTracks)`
+  - `connect(libraryScanner.tracksAppended &rarr; trackModel.addTracks)`
+  - Load initial data:
+    - `launchMode == "Library"` &rarr; `libraryScanner.loadDatabase()`
+    - otherwise &rarr; `libraryScanner.loadSpecificFiles(filepath)`
+  - Bind `QLocalServer` to `"MLP_MusicPlayerIPC"`
+  - `QQmlApplicationEngine` `engine` constructed
+  - `engine.addImageProvider("musiccover", new CoverArtProvider)`
+  - `engine.rootContext()->setContextProperty` &times; 4
+    - `"launchMode"`, `"audioEngine"`, `"libraryScanner"`, `"trackModel"` in QML scope
+  - `engine.load("qrc:/qml/main.qml")`
+    - Qt parses `main.qml`, creates `ApplicationWindow`
+    - `launchMode === "Library"`:
+      - `LibraryView` created (full window)
+    - `launchMode !== "Library"`:
+      - `MinimalView` created (compact 700x350 window)
+  - `app.exec()` &rarr; Event loop begins
+    - `QTimer` fires (from loadDatabase's singleShot):
+      - `tracksAdded(allTracks)` &rarr; `trackModel.setTracks(allTracks)`
+      - &rarr; `beginResetModel` &rarr; `endResetModel`
+      - &rarr; `LibraryView` `GridView` refreshes (shows all cached tracks)
 
 ---
 
-## 14.2 "Scan Directory" Flow
+## 22.2 "Scan Directory" Flow
 
 ```
 User: clicks hamburger menu → "Scan Directory"
 │
-├─ [QML] mainMenuPopup.close()
-├─ [QML] folderDialog.open()
-│
-│  [User selects /home/user/music in the OS folder picker]
-│
-├─ [QML] folderDialog.onAccepted:
-│       libraryScanner.scanDirectory(folderDialog.folder)
-│                        ↓ (C++ slot called from QML)
-│
-├─ [C++] LibraryScanner::scanDirectory(path)
-│   ├─ emit scanStarted()
-│   │       ↓ [QML Connections.onScanStarted]
-│   │       scanningPopup.open()  — shows spinner
-│   │
-│   └─ QtConcurrent::run([this, path]() {   // BACKGROUND THREAD
-│           QDirIterator walks every subdir
-│           │
-│           For each .mp3/.flac/.wav/.m4a found:
-│           │   TagLib::FileRef reads tags
-│           │   Check cover art (format-specific code)
-│           │   Build Track struct
-│           │   newTracks.append(track)
-│           │   filesProcessed++
-│           │
-│           │   if (filesProcessed % 10 == 0):
-│           │       emit scanProgress(filesProcessed)
-│           │               ↓ [QML Connections.onScanProgress]
-│           │               scanningLabel.text = "Found N tracks..."
-│           │
-│           Write newTracks to tracks.db (SQLite transaction)
-│           │
-│           QMetaObject::invokeMethod(Qt::QueuedConnection):
-│               → jumps back to main thread
-│               loadDatabase()
-│                   → reads all rows from DB
-│                   → emit tracksAdded(allTracks)
-│                           ↓ [connect in main.cpp]
-│                   trackModel.setTracks(allTracks)
-│                       beginResetModel
-│                       sort by artist/album/disc/track
-│                       rebuild displayIndices
-│                       endResetModel
-│                               ↓
-│                   LibraryView GridView refreshes automatically
-│               emit scanFinished(total)
-│                       ↓ [QML Connections.onScanFinished]
-│                   scanningPopup.close()
-```
+- **User clicks hamburger menu &rarr; "Scan Directory"**
+  - `[QML]` `mainMenuPopup.close()`
+  - `[QML]` `folderDialog.open()`
+  - *(User selects `/home/user/music` in the OS folder picker)*
+  - `[QML]` `folderDialog.onAccepted:`
+    - `libraryScanner.scanDirectory(folderDialog.folder)` &bull; *(C++ slot called from QML)*
+    - `[C++]` `LibraryScanner::scanDirectory(path)`
+      - `emit scanStarted()`
+        - `[QML]` `Connections.onScanStarted`
+        - `scanningPopup.open()` (shows spinner)
+      - `QtConcurrent::run` *(BACKGROUND THREAD)*
+        - `QDirIterator` walks every subdir
+        - For each `.mp3/.flac/.wav/.m4a` found:
+          - `TagLib::FileRef` reads tags
+          - Check cover art (format-specific code)
+          - Build `Track` struct
+          - `newTracks.append(track)`
+          - `filesProcessed++`
+          - `if (filesProcessed % 10 == 0):`
+            - `emit scanProgress(filesProcessed)`
+              - `[QML]` `Connections.onScanProgress`
+              - `scanningLabel.text = "Found N tracks..."`
+        - Write `newTracks` to `tracks.db` (SQLite transaction)
+        - `QMetaObject::invokeMethod(Qt::QueuedConnection):`
+          - *(jumps back to main thread)*
+          - `loadDatabase()`
+            - reads all rows from DB
+            - `emit tracksAdded(allTracks)`
+              - *(connect in main.cpp)*
+              - `trackModel.setTracks(allTracks)`
+                - `beginResetModel`
+                - sort by artist/album/disc/track
+                - rebuild `displayIndices`
+                - `endResetModel`
+                - `LibraryView` `GridView` refreshes automatically
+          - `emit scanFinished(total)`
+            - `[QML]` `Connections.onScanFinished`
+            - `scanningPopup.close()`
 
 ---
 
-## 14.3 "Play a Song" Flow
+## 22.3 "Play a Song" Flow
 
 ```
 User: clicks a track tile in LibraryView
-│
-├─ [QML] MouseArea.onClicked:
-│       window.playTrackAtIndex(index, "All Tracks")
-│
-├─ [QML function] playTrackAtIndex(5, "All Tracks")
-│   ├─ contextCategory is set → rebuild queue
-│   │   for (i = 0..trackModel.rowCount()-1):
-│   │       playbackQueue.push(trackModel.get(i))
-│   │   currentQueueIndex = 5
-│   │
-│   ├─ var track = playbackQueue[5]
-│   ├─ window.currentPlayingTitle  = track.title
-│   ├─ window.currentPlayingArtist = track.artist
-│   ├─ window.currentPlayingPath   = track.filePath
-│   │       ↓ (all QML text bound to these auto-updates)
-│   │
-│   ├─ audioEngine.loadFile(track.filePath) — calls C++ slot
-│   │       ↓ (AudioEngine::loadFile)
-│   │       ma_sound_uninit (previous)
-│   │       ma_sound_init_from_file (new file, ASYNC decode)
-│   │       ma_node_attach(sound → eqNodes[0])
-│   │       emit durationChanged(length)   → QML Slider.to updates
-│   │       emit positionChanged(0)        → QML Slider.value resets
-│   │
-│   └─ audioEngine.play() — calls C++ slot
-│           ↓ (AudioEngine::play)
-│           ma_sound_start(&m_sound)
-│           emit playingChanged(true)
-│                   ↓ [Q_PROPERTY NOTIFY]
-│           QML: audioEngine.isPlaying = true
-│           Play/Pause button icon changes to "pause.svg"
-│
-│ [250ms timer fires repeatedly while playing]
-│   AudioEngine timer callback:
-│   ├─ ma_sound_at_end? → emit playbackFinished() → auto-advance
-│   └─ isPlaying? → emit positionChanged(cursor)
-│                           ↓ [Q_PROPERTY NOTIFY]
-│               QML: Slider.value = audioEngine.position
-│               QML: Time labels update
-```
+- **User clicks a track tile in LibraryView**
+  - `[QML]` `MouseArea.onClicked:`
+    - `window.playTrackAtIndex(index, "All Tracks")`
+  - `[QML function]` `playTrackAtIndex(5, "All Tracks")`
+    - `contextCategory` is set &rarr; rebuild queue
+      - `for (i = 0..trackModel.rowCount()-1):`
+        - `playbackQueue.push(trackModel.get(i))`
+      - `currentQueueIndex = 5`
+    - `var track = playbackQueue[5]`
+    - `window.currentPlayingTitle = track.title`
+    - `window.currentPlayingArtist = track.artist`
+    - `window.currentPlayingPath = track.filePath`
+      - *(all QML text bound to these auto-updates)*
+    - `audioEngine.loadFile(track.filePath)` &bull; *(calls C++ slot AudioEngine::loadFile)*
+      - `ma_sound_uninit` (previous)
+      - `ma_sound_init_from_file` (new file, ASYNC decode)
+      - `ma_node_attach(sound &rarr; eqNodes[0])`
+      - `emit durationChanged(length)` &rarr; `QML Slider.to` updates
+      - `emit positionChanged(0)` &rarr; `QML Slider.value` resets
+    - `audioEngine.play()` &bull; *(calls C++ slot AudioEngine::play)*
+      - `ma_sound_start(&m_sound)`
+      - `emit playingChanged(true)` &bull; *(Q_PROPERTY NOTIFY)*
+        - `[QML]` `audioEngine.isPlaying = true`
+        - Play/Pause button icon changes to "pause.svg"
+  - **[250ms timer fires repeatedly while playing]**
+    - `AudioEngine` timer callback:
+      - `ma_sound_at_end?` &rarr; `emit playbackFinished()` &rarr; auto-advance
+      - `isPlaying?` &rarr; `emit positionChanged(cursor)` &bull; *(Q_PROPERTY NOTIFY)*
+        - `[QML]` `Slider.value = audioEngine.position`
+        - `[QML]` Time labels update
 
 ---
 
-## 14.4 "Seek to Position" Flow
+## 22.4 "Seek to Position" Flow
 
-```
-User: drags the progress slider to new position
-
-[QML Slider.onMoved]
-    audioEngine.position = value
-         ↓ (Q_PROPERTY WRITE: calls setPosition)
-
-[C++ AudioEngine::setPosition(newPos)]
-    ma_engine_get_sample_rate → sampleRate
-    targetFrame = newPos × sampleRate
-    ma_sound_seek_to_pcm_frame(&m_sound, targetFrame)
-    emit positionChanged(newPos)
-         ↓ (Q_PROPERTY NOTIFY)
-    [QML] Slider.value and time labels update to confirm the seek
-```
+- **User drags the progress slider to new position**
+  - `[QML Slider.onMoved]`
+    - `audioEngine.position = value` &bull; *(Q_PROPERTY WRITE: calls setPosition)*
+  - `[C++ AudioEngine::setPosition(newPos)]`
+    - `ma_engine_get_sample_rate` &rarr; `sampleRate`
+    - `targetFrame = newPos &times; sampleRate`
+    - `ma_sound_seek_to_pcm_frame(&m_sound, targetFrame)`
+    - `emit positionChanged(newPos)` &bull; *(Q_PROPERTY NOTIFY)*
+      - `[QML]` `Slider.value` and time labels update to confirm the seek
 
 ---
 
-## 14.5 "Change EQ Band" Flow
+## 22.5 "Change EQ Band" Flow
 
-```
-User: moves EQ slider for band 5 (1kHz)
-
-[QML EqualizerView Slider.onMoved]
-    eq.setBandGain(5, newValue)  — Q_INVOKABLE direct call
-         ↓
-
-[C++ Equalizer::setBandGain(5, newValue)]
-    clampedValue = clamp(newValue, -12, 12)
-    m_gains[5] = clampedValue
-    emit bandGainChanged(5, clampedValue)
-         ↓ (connect in AudioEngine constructor)
-
-[C++ AudioEngine::onEqualizerBandGainChanged(5, clampedValue)]
-    actualGain = eq->isEnabled() ? clampedValue : 0.0f
-    ma_peak2_config cfg = ma_peak2_config_init(f32, ch, sr, actualGain, 1.414, 1000Hz)
-    ma_peak_node_reinit(&m_eqNodes[5], &cfg)
-         ↓
-    Audio pipeline filter coefficients update instantly
-    Users hears the frequency change in real time
-
-[QML EqualizerView gain label]
-    text: eq.bandGain(5)  → reads new value → shows "+3.0 dB"
-    (updates because Slider.onMoved triggers re-read via binding)
-```
+- **User moves EQ slider for band 5 (1kHz)**
+  - `[QML EqualizerView Slider.onMoved]`
+    - `eq.setBandGain(5, newValue)` &bull; *(Q_INVOKABLE direct call)*
+  - `[C++ Equalizer::setBandGain(5, newValue)]`
+    - `clampedValue = clamp(newValue, -12, 12)`
+    - `m_gains[5] = clampedValue`
+    - `emit bandGainChanged(5, clampedValue)` &bull; *(connect in AudioEngine constructor)*
+  - `[C++ AudioEngine::onEqualizerBandGainChanged(5, clampedValue)]`
+    - `actualGain = eq->isEnabled() ? clampedValue : 0.0f`
+    - `ma_peak2_config cfg = ma_peak2_config_init(..., actualGain, ...)`
+    - `ma_peak_node_reinit(&m_eqNodes[5], &cfg)`
+    - Audio pipeline filter coefficients update instantly
+    - Users hears the frequency change in real time
+  - `[QML EqualizerView gain label]`
+    - `text: eq.bandGain(5)` &rarr; reads new value &rarr; shows "+3.0 dB"
+    - (updates because `Slider.onMoved` triggers re-read via binding)
 
 ---
 
-## 14.6 Class Dependency Map
+## 22.6 Class Dependency Map
 
-```
-main.cpp
-  ├── creates: AudioEngine
-  │       owns: Equalizer (child QObject)
-  │       uses: miniaudio (ma_engine, ma_sound, ma_peak_node[10])
-  │       uses: QTimer (250ms heartbeat)
-  │
-  ├── creates: LibraryScanner
-  │       uses: TagLib (reads tags)
-  │       uses: QSqlDatabase (SQLite persistence)
-  │       uses: QtConcurrent (background threads)
-  │       uses: QDirIterator (filesystem walk)
-  │
-  ├── creates: TrackModel
-  │       contains: QVector<Track> (all tracks in memory)
-  │       contains: QVector<int> (display filter indices)
-  │
-  ├── connects: LibraryScanner.tracksAdded → TrackModel.setTracks
-  │
-  ├── exposes via setContextProperty:
-  │       "audioEngine"    → AudioEngine*
-  │       "libraryScanner" → LibraryScanner*
-  │       "trackModel"     → TrackModel*
-  │
-  └── registers: CoverArtProvider under "musiccover"
-                       uses: TagLib (reads embedded images)
-                       uses: QImage (decodes JPEG/PNG bytes)
-```
-# Chapter 15 — Building, Running, and Packaging
+- `main.cpp`
+  - creates: `AudioEngine`
+    - owns: `Equalizer` (child QObject)
+    - uses: `miniaudio` (`ma_engine`, `ma_sound`, `ma_peak_node[10]`)
+    - uses: `QTimer` (250ms heartbeat)
+  - creates: `LibraryScanner`
+    - uses: `TagLib` (reads tags)
+    - uses: `QSqlDatabase` (SQLite persistence)
+    - uses: `QtConcurrent` (background threads)
+    - uses: `QDirIterator` (filesystem walk)
+  - creates: `TrackModel`
+    - contains: `QVector<Track>` (all tracks in memory)
+    - contains: `QVector<int>` (display filter indices)
+  - connects: `LibraryScanner.tracksAdded` &rarr; `TrackModel.setTracks`
+  - connects: `LibraryScanner.tracksAppended` &rarr; `TrackModel.addTracks`
+  - creates: `QLocalServer` (`"MLP_MusicPlayerIPC"`)
+    - receives: file paths from secondary instances
+    - calls: `LibraryScanner.appendSpecificFiles()`
+  - exposes via `setContextProperty`:
+    - `"launchMode"` &rarr; `QString` constant (`"Library"`/`"Minimal"`/`"Queue"`)
+    - `"audioEngine"` &rarr; `AudioEngine*`
+    - `"libraryScanner"` &rarr; `LibraryScanner*`
+    - `"trackModel"` &rarr; `TrackModel*`
+  - registers: `CoverArtProvider` under `"musiccover"`
+    - uses: `TagLib` (reads embedded images)
+    - uses: `QImage` (decodes JPEG/PNG bytes)
 
-## 15.1 Development Build (Linux)
+---
+
+## 22.7 IPC — Secondary Launch → Queue Update Flow
+
+- **User selects 3 audio files in file manager and double-clicks to open**
+  - OS spawns `Process 2` (and possibly 3, 4...) with file paths as `argv`
+  - **Process 2**: `main()` starts
+    - `QLocalSocket.connectToServer("MLP_MusicPlayerIPC")`
+      - **Success!** Primary instance is running
+        - `socket.write("track_b.mp3\ntrack_c.mp3")`
+        - `return 0` &bull; *(Process 2 exits immediately)*
+      - **Failure**: no primary instance yet (first ever launch)
+        - continue with normal startup ...
+  - **Primary instance** (already running) — `QLocalServer` event:
+    - `newConnection` signal fires
+    - `clientSocket->readAll()` &rarr; `"track_b.mp3\ntrack_c.mp3"`
+    - `libraryScanner.appendSpecificFiles(["track_b.mp3", "track_c.mp3"])`
+      - Parses tags with `TagLib` (lightweight, no SQLite)
+      - `m_tracks.append(newTracks)` *(does NOT clear existing tracks)*
+      - `emit tracksAppended(newTracks)`
+        - *(connect in main.cpp)* &rarr; `trackModel.addTracks(newTracks)`
+        - `beginInsertRows` / `endInsertRows` (no reset)
+        - QML queue `ListView` appends items
+    - `[QML]` `Connections.onTracksAppended` fires:
+      - `let newQueue = rebuild from trackModel`
+      - `window.playbackQueue = newQueue`
+      - `if (was empty) window.playTrackAtIndex(0, "IPC")` *(autoplay)*
+    - Existing playback continues undisturbed if queue was not empty
+
+
+<div class="page-break"></div>
+
+<a id="23_building_and_packaging.md"></a>
+
+# Chapter 23 — Building, Running, and Packaging
+
+## 23.1 Development Build (Linux)
 
 ### Prerequisites
 ```bash
@@ -3412,9 +5862,11 @@ sudo apt install -y \
     cmake build-essential \
     qt5-default qtbase5-dev qtdeclarative5-dev \
     qml-module-qt-labs-platform \
+    qml-module-qt-labs-settings \
     qml-module-qtquick-controls2 \
     qml-module-qtquick-layouts \
     libqt5sql5-sqlite libqt5concurrent5 \
+    libqt5network5 qt5-default \
     libtag1-dev libtagc0-dev \
     pkg-config
 ```
@@ -3438,7 +5890,7 @@ make -j$(nproc)
 
 ---
 
-## 15.2 Common Build Errors and Fixes
+## 23.2 Common Build Errors and Fixes
 
 ### Error: `Qt5 not found`
 ```
@@ -3471,7 +5923,7 @@ sudo apt install libqt5sql5-sqlite
 
 ---
 
-## 15.3 Project File Structure for IDE (Qt Creator)
+## 23.3 Project File Structure for IDE (Qt Creator)
 
 Qt Creator can open the project directly from `CMakeLists.txt`:
 1. Open Qt Creator → File → Open File or Project
@@ -3487,7 +5939,7 @@ Qt Creator provides:
 
 ---
 
-## 15.4 Creating a Linux AppImage
+## 23.4 Creating a Linux AppImage
 
 An AppImage bundles all Qt dependencies into a single portable file that runs on any Linux distro.
 
@@ -3527,7 +5979,7 @@ chmod +x MusicPlayer-x86_64.AppImage
 
 ---
 
-## 15.5 Building on Windows with MSYS2
+## 23.5 Building on Windows with MSYS2
 
 ### Setup
 1. Install [MSYS2](https://www.msys2.org/)
@@ -3559,7 +6011,7 @@ Copy the resulting folder (containing MusicPlayer.exe and DLLs) to a ZIP file fo
 
 ---
 
-## 15.6 The `.qrc` Resource System — How Files Get Into the Binary
+## 23.6 The `.qrc` Resource System — How Files Get Into the Binary
 
 Two resource files pack content into the binary:
 
@@ -3571,6 +6023,7 @@ Two resource files pack content into the binary:
     <file>qml/LibraryView.qml</file>
     <file>qml/EqualizerView.qml</file>
     <file>qml/NowPlayingView.qml</file>
+    <file>qml/MinimalView.qml</file>
   </qresource>
 </RCC>
 ```
@@ -3596,7 +6049,7 @@ The `qt5_add_resources(RESOURCES qml.qrc icons.qrc)` CMake call runs `rcc` to em
 
 ---
 
-## 15.7 Runtime Data Storage
+## 23.7 Runtime Data Storage
 
 The app stores data in the platform's standard application data directory:
 
@@ -3608,38 +6061,73 @@ The app stores data in the platform's standard application data directory:
 EQ presets (QSettings):
 | Platform | Path |
 |---------|------|
-| Linux | `~/.config/ModernMusicPlayer/EqualizerPresets.ini` |
-| Windows | Windows Registry: `HKCU\Software\ModernMusicPlayer\EqualizerPresets` |
+| Linux | `~/.config/LordTael/MLP Player.ini` |
+| Windows | Windows Registry: `HKCU\Software\LordTael\MLP Player` |
 
 ---
 
-## 15.8 Quick Reference: Key Files
+## 23.8 User-Space Installation (No sudo Required)
+
+The app can be installed for the current user only — no root privileges needed:
+
+```bash
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make -j$(nproc)
+make install   # Installs under $HOME — no sudo
+```
+
+Install targets:
+| File | Destination |
+|---|---|
+| `MusicPlayer` binary | `~/.var/app/com.musicplayer.mlmPlayer/MusicPlayer` |
+| `MusicPlayer.desktop` | `~/.local/share/applications/MusicPlayer.desktop` |
+| `AppIcon.png` | `~/.local/share/icons/hicolor/512x512/apps/MusicPlayer.png` |
+
+After install, register MIME types:
+```bash
+update-desktop-database ~/.local/share/applications
+```
+
+The `.desktop` file `Exec` field uses `$HOME` to be portable across any username:
+```desktop
+Exec=sh -c 'exec "$HOME/.var/app/com.musicplayer.mlmPlayer/MusicPlayer" "$@"' dummy %F
+MimeType=audio/mpeg;audio/flac;audio/mp4;audio/ogg;audio/x-wav;...
+```
+
+`%F` tells the file manager to pass all selected files as separate arguments to a **single** process launch.
+
+---
+
+## 23.8 Quick Reference: Key Files
 
 | File | Role |
 |------|------|
 | `CMakeLists.txt` | Build configuration |
-| `src/main.cpp` | App entry point, wires all components |
+| `src/main.cpp` | App entry point, IPC, argument parsing, wires all components |
 | `include/track.h` | Plain data struct for one song |
 | `include/track_model.h` | Qt model exposing tracks to QML |
-| `include/library_scanner.h` | Scans folders, reads tags, writes DB |
+| `include/library_scanner.h` | Scans folders, reads tags, writes DB, appends via IPC |
 | `include/audio_engine.h` | Plays audio, volume, seek, EQ chain |
 | `include/equalizer.h` | 10-band EQ with presets |
 | `include/cover_art_provider.h` | Serves album art images to QML |
 | `src/track_model.cpp` | Model implementation + sorting/filtering |
-| `src/library_scanner.cpp` | TagLib + SQLite + QtConcurrent |
+| `src/library_scanner.cpp` | TagLib + SQLite + QtConcurrent + appendSpecificFiles |
 | `src/audio_engine.cpp` | miniaudio integration |
 | `src/equalizer.cpp` | EQ band management + QSettings presets |
 | `src/cover_art_provider.cpp` | TagLib image extraction → QImage |
-| `qml/main.qml` | Root window, playback bar, popups, shortcuts |
+| `qml/main.qml` | Root window, session persistence, playback bar, popups, shortcuts |
 | `qml/LibraryView.qml` | Sidebar + tabbed tile grid + StackView |
-| `qml/EqualizerView.qml` | 10-band EQ sliders + preset ComboBox |
+| `qml/EqualizerView.qml` | 10-band EQ sliders + preset management |
 | `qml/NowPlayingView.qml` | Full-screen now playing overlay |
+| `qml/MinimalView.qml` | Compact 700x350 now playing for file-manager launches |
 | `third_party/miniaudio.h` | Complete audio engine (single header) |
-| `build_appimage.sh` | Linux AppImage packaging script |
+| `Dist/Linux/MusicPlayer.desktop` | OS desktop entry with MIME type declarations |
+| `Dist/Linux/build_appimage.sh` | Linux AppImage packaging script |
 
 ---
 
-## 15.9 Summary: The Mental Model
+## 23.9 Summary: The Mental Model
 
 When everything is running:
 
@@ -3682,3 +6170,7 @@ When everything is running:
 Every arrow is either a Qt signal/slot connection, a Q_PROPERTY binding, or a direct method call — nothing is global state, nothing is shared memory without synchronization.
 
 Congratulations — you now understand the complete architecture of this music player from the CMake build system all the way to the QML pixels on screen!
+
+
+<div class="page-break"></div>
+
